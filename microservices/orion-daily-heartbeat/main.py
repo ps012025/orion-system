@@ -2,6 +2,7 @@ import os
 import yaml
 import requests
 from flask import Flask, jsonify
+from google.cloud import run_v2
 
 # --- Initialization ---
 app = Flask(__name__)
@@ -51,20 +52,16 @@ def handle_request():
         
         health_results = []
         
-        # Dynamically get all Cloud Run services in the project
-        # This requires the service account to have 'run.services.list' permission
-        # orion-service-account already has 'run.invoker' which might be enough
-        # If not, 'run.viewer' or 'run.admin' might be needed.
-        gcloud_run_services_list_cmd = f"gcloud run services list --project={project_id} --region={region} --format=json"
+        # Use the Cloud Run Admin API client to list services
         try:
-            import subprocess
-            import json
-            process = subprocess.run(gcloud_run_services_list_cmd, shell=True, capture_output=True, text=True, check=True)
-            deployed_services = json.loads(process.stdout)
-            deployed_service_names = {s['metadata']['name'] for s in deployed_services}
+            run_client = run_v2.ServicesClient()
+            parent = f"projects/{project_id}/locations/{region}"
+            request = run_v2.ListServicesRequest(parent=parent)
+            deployed_services = run_client.list_services(request=request)
+            deployed_service_names = {s.name.split('/')[-1] for s in deployed_services}
         except Exception as e:
-            print(f"Warning: Could not list deployed Cloud Run services: {e}. Proceeding with static list.")
-            deployed_service_names = set() # Fallback to empty set
+            print(f"Warning: Could not list deployed Cloud Run services via API: {e}. Proceeding with static list.")
+            deployed_service_names = set()
 
         print(f"Pinging {len(agents)} services defined in config...")
 
@@ -73,7 +70,6 @@ def handle_request():
             if not service_name:
                 continue
 
-            # Only check services that are actually deployed as Cloud Run services
             if service_name not in deployed_service_names:
                 print(f"  - Skipping {service_name}: Not found as a deployed Cloud Run service.")
                 continue

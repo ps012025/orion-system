@@ -21,3 +21,6 @@ steps:
 
 images:
 - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
