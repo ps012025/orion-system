@@ -1,0 +1,7 @@
+macro_analyzer_config:
+  fred_series_ids:
+    - M2SL
+    - DFF
+    - DGS10
+  market_symbols:
+    - ^IXIC

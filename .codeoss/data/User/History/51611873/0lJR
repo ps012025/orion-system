@@ -1,0 +1,23 @@
+# ベースとなるPythonイメージを指定
+# Cloud Runの推奨はスリム版のPython
+FROM python:3.10-slim
+
+# OSレベルの依存関係（SQLiteドライバ）をインストール
+# これが「SQLite driver not installed!」エラーを根本解決する鍵です
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# コンテナ内の作業ディレクトリを設定
+WORKDIR /app
+
+# プログラムのソースコードをコンテナにコピー
+COPY . /app
+
+# Pythonの依存関係をインストール
+# requirements.txtに記載されたライブラリをインストール
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Gunicornを使ってアプリケーションを起動するコマンド
+# $PORTはCloud Runが自動で割り当てる環境変数
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "main:app"]

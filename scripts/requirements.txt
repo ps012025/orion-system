@@ -1,0 +1,5 @@
+google-cloud-bigquery
+google-cloud-firestore
+google-cloud-aiplatform
+backtesting
+pandas

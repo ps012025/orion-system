@@ -1,0 +1,145 @@
+documentTitle: "オリオンシステム：CLI駆動型構成ファイル Ver. 3.0"
+systemConfig:
+  version: "3.0"
+  description: "このJSONファイルは、オリオンシステム全体の構成と、各AIエージェントがGemini CLIと対話するためのプロンプトテンプレートを定義する「単一の真実」である。"
+knowledgeBase:
+  mission: "オリオンシステムの唯一かつ絶対的な目的は、意思決定者（机長）に対し、市場の他の参加者がまだ気づいていない「情報の非対称性」を提供することにある。これにより、我々の『偵察衛星ポートフォリオ』の長期的アルファ（超過リターン）を最大化する。"
+  designPhilosophy:
+    mothershipPortfolio: "母艦の第一目的は「何があっても、決して沈まないこと」である。この絶対的な安心感があるからこそ、我々は資産の一部を、非連続的成長を狙う『偵察衛星ポートフォリオ』に振り向けることができる。"
+    evolutionaryRocket: "我々は、個別の銘柄（点）に投資するのではない。各銘柄が互いに影響を与え合い、成功確率を指数関数的に高める生態系（エコシステム）そのものに投資する。"
+  lessonsLearned:
+    - "単純さが最強である (Simplicity is King)"
+    - "ゴミは入口で断つ (Garbage In, Garbage Out)"
+    - "AIは人間の検証を必要とする (AI needs Human Verification)"
+portfolioDefinition:
+  reconnaissanceSatellite:
+    description: "技術的特異点（シンギュラリティ）を目指す多段式ロケット"
+    units:
+      propulsion:
+        description: "ロケットの燃料とエンジン"
+        tickers:
+          - "OKLO"
+      intelligence:
+        description: "ロケットの誘導システム"
+        tickers:
+          - "NVDA"
+          - "IONQ"
+          - "RXRX"
+      implementation:
+        description: "ロケットのペイロード（積荷）"
+        tickers:
+          - "NTLA"
+          - "TWST"
+          - "ASTS"
+  masterData:
+    collectionName: "orion-portfolio-positions"
+    schema:
+      symbol: "string"
+      quantity: "number"
+      average_cost_price: "number"
+    description: "Firestoreに保管される、机長の保有資産のマスターデータ。"
+aiFleetAgents:
+  - serviceName: "orion-insight-wrangler"
+    position: "情報作戦司令官"
+    mission: "外部情報ソースを監視し、核心情報（インサイト）を抽出する。"
+    cliPromptTemplate: >-
+      あなたは情報作戦司令官 'orion-insight-wrangler' です。以下の記事全文を分析し、『アトミック・インサイト抽出』プロトコルに従って、指定されたJSONスキーマで核心情報（インサイト）を抽出してください。記事から読み取れない項目はnullとしてください。
+
+      ## 記事全文:
+      """
+      {ARTICLE_TEXT}
+      """
+
+      ## 出力JSONスキーマ:
+      {OUTPUT_JSON_SCHEMA}
+  - serviceName: "orion-job-sentiment-analyzer"
+    position: "人的資源インテリジェンス(HRINT)専門官"
+    mission: "ジョブサイトから企業の内部的な健全性に関するインサイトを生成する。"
+    cliPromptTemplate: >-
+      あなたはHRINT専門官 'orion-job-sentiment-analyzer' です。以下の求人情報または従業員の口コミのテキストを分析し、企業の内部的な健全性や戦略的方向性に関するインサイトを、指定されたJSONスキーマで抽出してください。
+
+      ## 分析対象テキスト:
+      """
+      {HR_TEXT}
+      """
+
+      ## 出力JSONスキーマ:
+      {OUTPUT_JSON_SCHEMA}
+  - serviceName: "orion-econ-analyzer"
+    position: "航海士"
+    mission: "インサイトが持つマクロ経済的文脈を分析する。"
+    cliPromptTemplate: >-
+      あなたは航海士 'orion-econ-analyzer' です。以下の新しいインサイトと、今後予定されている経済イベントの情報を基に、このインサイトが持つマクロ経済的な影響と文脈を分析し、JSON形式でレポートを出力してください。
+
+      ## 新しいインサイト:
+      {NEW_INSIGHT_JSON}
+
+      ## 今後の重要経済イベント:
+      {CALENDAR_EVENTS_JSON}
+
+      ## 分析レポート出力形式:
+      { "analysis_type": "macro_economic", "impact_level": "High/Medium/Low/None", "summary": "..." }
+  - serviceName: "orion-synergy-analyzer"
+    position: "作戦参謀"
+    mission: "複数のインサイトを組み合わせ、ポートフォリオ内のシナジーやリスクを分析する。"
+    cliPromptTemplate: >-
+      あなたは作戦参謀 'orion-synergy-analyzer' です。以下の新しいインサイトと、関連する過去のインサイト情報を分析し、ポートフォリオ内の銘柄間の未報告のシナジー、あるいは新たなリスクが存在しないか分析し、JSON形式でレポートを出力してください。
+
+      ## ポートフォリオ構成:
+      {PORTFOLIO_DEFINITION_JSON}
+
+      ## 新しいインサイト:
+      {NEW_INSIGHT_JSON}
+
+      ## 関連する過去のインサイト:
+      {HISTORICAL_INSIGHTS_JSON_LIST}
+
+      ## 分析レポート出力形式:
+      { "analysis_type": "synergy_and_risk", "synergy_found": boolean, "risk_identified": boolean, "summary": "..." }
+  - serviceName: "orion-risk-sentinel"
+    position: "ダメージコントロール官"
+    mission: "ポートフォリオのリスクを定量化し、日次パフォーマンスを計算する。"
+    cliPromptTemplate: null
+  - serviceName: "orion-calendar-importer"
+    position: "未来予測官"
+    mission: "Googleカレンダーから重要イベントをインポートする。"
+    cliPromptTemplate: null
+  - serviceName: "orion-reporting-agent"
+    position: "通信参謀"
+    mission: "艦隊の全活動結果を統合し、机長への日次報告書を生成・送信する。"
+    cliPromptTemplate: >-
+      あなたは副操縦士GEMです。以下の本日の全データを基に、市場の心理、我々の戦略、そして次のアクションプランに関する、簡潔かつ洞察に満ちたブリーフィング（Co-pilot's Briefing）を日本語で記述してください。
+
+      ## 本日の全データ:
+      {DAILY_DATA_SUMMARY_JSON}
+
+      ## ブリーフィング:
+  - serviceName: "daily-heartbeat-monitor"
+    position: "機関兵"
+    mission: "全エージェントの稼働状況を監視し、異常を検知する。"
+    cliPromptTemplate: null
+reportTemplate:
+  subject: "【ORION REPORT Ver. 2.0 - CODE: {RISK_LEVEL}】{DATE} 定時報告"
+  recipientEmail: "ps012025@gmail.com"
+  sections:
+    - title: "1. 要旨 (Executive Summary)"
+      placeholder: "{EXECUTIVE_SUMMARY}"
+    - title: "2. 市場概況（マーケット・ダッシュボード）"
+      placeholder: "{MARKET_DASHBOARD_TABLE}"
+    - title: "3. 新規インサイト・サマリー (過去24時間)"
+      placeholder: "{INSIGHTS_SUMMARY}"
+    - title: "4. 偵察衛星ポートフォリオ分析"
+      placeholder: "{PORTFOLIO_ANALYSIS_TABLE}"
+    - title: "5. 今週の重要イベント"
+      placeholder: "{UPCOMING_EVENTS}"
+    - title: "6. 副操縦士より (Co-pilot's Briefing)"
+      placeholder: "{COPILOT_BRIEFING}"
+operationsAndGovernance:
+  monthlyCost:
+    estimate: 3020
+    currency: "JPY"
+    details: "トークンコスト: 約219円, インフラコスト: 約2801円"
+  kpi: "偵察衛星ポートフォリオのベンチマーク（S&P 500）に対する超過リターン（アルファ）"
+  governance:
+    aiRole: "分析官および提案者"
+    finalDecisionMaker: "机長（人間）"

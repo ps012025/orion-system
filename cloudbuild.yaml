@@ -1,0 +1,18 @@
+steps:
+# ... (previous steps for orion-sec-fetcher remain the same) ...
+
+# 4. Deploy orion-options-analyzer as a Cloud Function
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args: [
+    'functions', 'deploy', 'orion-options-analyzer',
+    '--gen2',
+    '--runtime', 'python312',
+    '--source', './microservices/orion-options-analyzer/',
+    '--entry-point', 'analyze_sentiment_http',
+    '--trigger-http',
+    '--no-allow-unauthenticated',
+    '--region', 'asia-northeast1',
+    '--service-account', 'orion-service-account@$PROJECT_ID.iam.gserviceaccount.com',
+    '--set-env-vars=GCP_PROJECT=$PROJECT_ID,MARKET_DATA_API_KEY=d31obppr01qsprr1t6cgd31obppr01qsprr1t6d0'
+  ]

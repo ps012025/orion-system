@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[co]
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Logs and Caches
+*.log
+.cache/
+
+# Local credentials and secrets
+*.secret
+.env
+.gemini/

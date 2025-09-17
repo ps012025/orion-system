@@ -1,0 +1,3 @@
+hr_fetcher_config:
+  job_rss_feeds:
+    NVIDIA_JOBS: https://www.linkedin.com/jobs/rss/c/nvidia/jobs

@@ -1,0 +1,11 @@
+Flask==3.0.0
+google-cloud-firestore==2.16.0
+PyYAML==6.0.1
+google-api-python-client==2.136.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.2
+gunicorn==22.0.0
+google-cloud-aiplatform==1.71.1
+google-cloud-secret-manager==2.19.0
+google-cloud-pubsub==2.22.0
+requests==2.32.3

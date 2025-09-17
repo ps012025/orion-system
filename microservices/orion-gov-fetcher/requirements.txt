@@ -1,0 +1,6 @@
+Flask==3.0.0
+gunicorn==23.0.0
+google-cloud-firestore
+google-cloud-pubsub
+requests
+feedparser

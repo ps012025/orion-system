@@ -1,0 +1,9 @@
+sec_fetcher_config:
+  ticker_to_cik:
+    NVDA: "0001045810"
+    IONQ: "0001824965"
+    OKLO: "0001822996"
+    NTLA: "0001613520"
+    RXRX: "0001602257"
+    TWST: "0001723534"
+    ASTS: "0001780312"

@@ -1,0 +1,3 @@
+google-cloud-aiplatform
+requests
+functions-framework

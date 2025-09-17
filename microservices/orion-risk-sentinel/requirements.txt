@@ -1,0 +1,7 @@
+Flask==3.0.0
+gunicorn==23.0.0
+google-cloud-firestore==2.*
+google-cloud-bigquery==3.*
+pandas==2.*
+finnhub-python==2.4.*
+functions-framework==3.*
