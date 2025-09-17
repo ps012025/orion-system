@@ -17,6 +17,7 @@ BQ_DATASET = "orion_datalake"
 MARKET_TABLE = "market_data_history"
 MACRO_TABLE = "macro_data_history"
 REPORTS_COLLECTION = "orion-analysis-reports"
+CALENDAR_COLLECTION = "orion-calendar-events"
 
 # --- Clients ---
 vertexai.init(project=PROJECT_ID, location=LOCATION)
@@ -42,9 +43,14 @@ def fetch_data_from_datalake(config: dict) -> pd.DataFrame:
     days_to_fetch = 365 * 2
     start_date = (datetime.now() - timedelta(days=days_to_fetch)).strftime('%Y-%m-%d')
 
-    market_query = f"""SELECT timestamp, symbol, close FROM `{PROJECT_ID}.{BQ_DATASET}.{MARKET_TABLE}` WHERE symbol IN ('{str(market_symbols)[1:-1]}') AND DATE(timestamp) >= '{start_date}'"""
-    macro_query = f"""SELECT timestamp, series_id, value FROM `{PROJECT_ID}.{BQ_DATASET}.{MACRO_TABLE}` WHERE series_id IN ('{str(macro_series_ids)[1:-1]}') AND DATE(timestamp) >= '{start_date}'"""
+    # Safely format lists for SQL IN clause
+    market_symbols_str = ", ".join([f"'{s}'" for s in market_symbols]) if market_symbols else "''"
+    macro_series_ids_str = ", ".join([f"'{s}'" for s in macro_series_ids]) if macro_series_ids else "''"
 
+    market_query = f"SELECT timestamp, symbol, close FROM `{PROJECT_ID}.{BQ_DATASET}.{MARKET_TABLE}` WHERE symbol IN ({market_symbols_str}) AND DATE(timestamp) >= '{start_date}'"
+    macro_query = f"SELECT timestamp, series_id, value FROM `{PROJECT_ID}.{BQ_DATASET}.{MACRO_TABLE}` WHERE series_id IN ({macro_series_ids_str}) AND DATE(timestamp) >= '{start_date}'"
+
+    print("Running queries against BigQuery...")
     market_df = bq_client.query(market_query).to_dataframe()
     macro_df = bq_client.query(macro_query).to_dataframe()
 
@@ -58,6 +64,17 @@ def fetch_data_from_datalake(config: dict) -> pd.DataFrame:
     print(f"Successfully fetched and combined {len(combined_df)} rows of data.")
     return combined_df
 
+def fetch_calendar_events() -> list:
+    print("Fetching upcoming calendar events from Firestore...")
+    events = []
+    now = datetime.now(timezone.utc)
+    query = db.collection(CALENDAR_COLLECTION).where('start_time', '>=', now.isoformat()).where('start_time', '<', (now + timedelta(days=30)).isoformat()).order_by('start_time')
+    for doc in query.stream():
+        event = doc.to_dict()
+        events.append(f"- {event.get('summary')} ({event.get('start_time')})")
+    print(f"Found {len(events)} upcoming events.")
+    return events
+
 @app.route("/", methods=["POST"])
 def analyze_macro_environment_v5():
     try:
@@ -67,19 +84,33 @@ def analyze_macro_environment_v5():
 
         daily_returns = combined_df.pct_change().dropna()
         correlation_matrix = daily_returns.corr()
+        print("Correlation Matrix:\n", correlation_matrix)
 
-        prompt = f"..." # Prompt remains the same
+        upcoming_events = fetch_calendar_events()
+        events_string = "\n".join(upcoming_events) if upcoming_events else " 今後30日間に予定されている主要な経済イベントはありません。"
+
+        prompt_template = config.get('macro_analyzer_config', {}).get('ai_prompt', "")
+        if not prompt_template:
+            raise ValueError("AI prompt template not found in config.")
+
+        prompt = prompt_template.format(
+            correlation_matrix=correlation_matrix.to_string(),
+            events_string=events_string
+        )
         analysis_response = model.generate_content(prompt)
+        print("AI analysis generated.")
 
         report_data = {
             "type": "macro_analysis_v5",
             "created_at": firestore.SERVER_TIMESTAMP,
             "correlation_matrix": correlation_matrix.to_json(),
+            "upcoming_events_analyzed": upcoming_events,
             "analysis_summary": analysis_response.text,
             "data_sources": [f"bigquery:{MARKET_TABLE}", f"bigquery:{MACRO_TABLE}"]
         }
         db.collection(REPORTS_COLLECTION).add(report_data)
         
+        print("Successfully stored data lake-native macro analysis report.")
         return jsonify({"status": "success"}), 200
 
     except Exception as e:
