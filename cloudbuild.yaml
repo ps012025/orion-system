@@ -1,5 +1,39 @@
 steps:
-# ... (previous steps for orion-sec-fetcher and orion-options-analyzer remain the same) ...
+# 1. Build the container image
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:latest', './microservices/orion-sec-fetcher']
+
+# 2. Push the container image to Artifact Registry
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:latest']
+
+# 3. Deploy the container image to Cloud Run
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args: [
+    'run', 'deploy', 'orion-sec-fetcher',
+    '--image', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:latest',
+    '--region', 'asia-northeast1',
+    '--service-account', 'orion-service-account@$PROJECT_ID.iam.gserviceaccount.com',
+    '--no-allow-unauthenticated',
+    '--set-env-vars=GCP_PROJECT=$PROJECT_ID'
+  ]
+
+# 4. Deploy orion-options-analyzer as a Cloud Function
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args: [
+    'functions', 'deploy', 'orion-options-analyzer',
+    '--gen2',
+    '--runtime', 'python312',
+    '--source', './microservices/orion-options-analyzer/',
+    '--entry-point', 'analyze_sentiment_http',
+    '--trigger-http',
+    '--no-allow-unauthenticated',
+    '--region', 'asia-northeast1',
+    '--service-account', 'orion-service-account@$PROJECT_ID.iam.gserviceaccount.com',
+    '--set-env-vars=GCP_PROJECT=$PROJECT_ID,MARKET_DATA_API_KEY=d31obppr01qsprr1t6cgd31obppr01qsprr1t6d0'
+  ]
 
 # 5. Deploy orion-daily-heartbeat as a Cloud Run service
 - name: 'gcr.io/cloud-builders/docker'
@@ -23,3 +57,6 @@ images:
 - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-sec-fetcher:latest'
 - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-options-analyzer:latest'
 - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-daily-heartbeat:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
