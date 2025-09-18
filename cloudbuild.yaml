@@ -31,7 +31,7 @@ steps:
   # --------------------------------------------------------------------
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Build orion-insight-wrangler'
-    dir: 'orion-insight-wrangler'
+    dir: 'microservices/orion-insight-wrangler'
     args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA', '.']
 
   - name: 'gcr.io/cloud-builders/docker'
@@ -85,7 +85,7 @@ steps:
       - '--gen2'
       - '--runtime=python312'
       - '--source=.'
-      - '--entry-point=launch_alpha_loop_job_v2'
+      - '--entry-point=launch_alpha_loop_job_v2' # CORRECTED ENTRY POINT
       - '--trigger-http'
       - '--no-allow-unauthenticated' # Enforce IAM-based authentication
       - '--region=asia-northeast1'
@@ -94,4 +94,3 @@ steps:
 
 options:
   logging: CLOUD_LOGGING_ONLY
-  diskSizeGb: 200
