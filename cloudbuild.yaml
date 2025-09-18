@@ -28,8 +28,9 @@ steps:
   entrypoint: gcloud
   args: [ 'functions', 'deploy', 'zero-cost-filter', '--gen2', '--runtime=python312', '--source=./microservices/zero-cost-filter', '--entry-point=pre_filter_url', '--trigger-topic=raw-urls-ingest', '--region=asia-northeast1', '--service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com' ]
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  dir: 'microservices/alpha-loop-launcher'
   entrypoint: gcloud
-  args: [ 'functions', 'deploy', 'trigger-alpha-loop-func', '--gen2', '--runtime=python312', '--source=./microservices/alpha-loop-launcher', '--entry-point=main', '--trigger-http', '--allow-unauthenticated', '--region=asia-northeast1', '--service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com' ]
+  args: [ 'functions', 'deploy', 'trigger-alpha-loop-func', '--gen2', '--runtime=python312', '--source=.', '--entry-point=main', '--trigger-http', '--allow-unauthenticated', '--region=asia-northeast1', '--service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com' ]
 
 options:
   logging: CLOUD_LOGGING_ONLY
