@@ -24,12 +24,17 @@ steps:
     echo "===================================================="
 
     for dir in $${CHANGED_DIRS}; do
+      # Skip the root directory to prevent recursive builds.
+      if [ "$$dir" == "." ]; then
+        echo "--> Change detected in root directory, skipping trigger."
+        continue
+      fi
+
       # Check if a cloudbuild.yaml exists in the changed directory, indicating it's a deployable service.
       if [ -f "$${dir}/cloudbuild.yaml" ]; then
         echo "--> Change detected in '$${dir}', triggering build..."
         gcloud builds submit "$${dir}" \
           --config="$${dir}/cloudbuild.yaml" \
-          --substitutions=COMMIT_SHA=$COMMIT_SHA \
           --project=$PROJECT_ID
       else
         echo "--> Change detected in '$${dir}', but no cloudbuild.yaml found. Skipping."
