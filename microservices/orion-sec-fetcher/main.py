@@ -83,7 +83,7 @@ def fetch_and_publish_new_filings(cik: str, company_symbol: str):
     set_last_checked_timestamp(cik, latest_filing_time)
 
 @app.route("/", methods=["POST"])
-def sec_fetcher_http():
+def sec_fetcher_http(request):
     print("Orion SEC Fetcher v3 (Flask) activated...")
     try:
         config = load_config()
