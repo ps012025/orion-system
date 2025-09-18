@@ -1,65 +1,42 @@
-# Orion System v8.2 - Monorepo-Aware CI/CD Pipeline
+# Orion System v8.2 - Monorepo-Aware CI/CD Pipeline (FORCED DEPLOYMENT)
 steps:
-  # Step 1: Detect changed services
-  - name: 'gcr.io/cloud-builders/git'
-    id: 'detect-changes'
-    entrypoint: 'bash'
-    args:
-      - -c
-      - |
-        set -e
-        # Compare against the master branch to find changed directories
-        CHANGED_DIRS=$(git diff --name-only origin/master HEAD | xargs -n 1 dirname | sort -u)
-        if [ -z "$$CHANGED_DIRS" ]; then
-          echo "No changes detected."
-        else
-          echo "Detected changes in the following services:"
-          for DIR in $$CHANGED_DIRS; do
-            # Extract the service name from the directory path
-            SERVICE_NAME=$(basename "$$DIR")
-            echo "- $$SERVICE_NAME"
-            # Create a flag file for each changed service
-            touch "/workspace/$$SERVICE_NAME.build_flag"
-          done
-        fi
-
-  # --- Deployment Steps ---
+  # --- Deployment Steps (Unconditional) ---
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "if [ -f '/workspace/orion-sec-fetcher.build_flag' ]; then gcloud run deploy orion-sec-fetcher --source=./orion-sec-fetcher --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID; else echo 'Skipping orion-sec-fetcher'; fi" ]
+    args: [ '-c', "gcloud run deploy orion-sec-fetcher --source=./orion-sec-fetcher --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "if [ -f '/workspace/orion-insight-wrangler.build_flag' ]; then gcloud run deploy orion-insight-wrangler --source=./orion-insight-wrangler --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID; else echo 'Skipping orion-insight-wrangler'; fi" ]
+    args: [ '-c', "gcloud run deploy orion-insight-wrangler --source=./orion-insight-wrangler --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "if [ -f '/workspace/orion-report-mailer.build_flag' ]; then gcloud run deploy orion-report-mailer --source=./orion-report-mailer --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID; else echo 'Skipping orion-report-mailer'; fi" ]
+    args: [ '-c', "gcloud run deploy orion-report-mailer --source=./orion-report-mailer --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "if [ -f '/workspace/zero-cost-filter.build_flag' ]; then gcloud functions deploy zero-cost-filter --gen2 --runtime=python312 --source=./microservices/zero-cost-filter --entry-point=pre_filter_url --trigger-topic=raw-urls-ingest --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID; else echo 'Skipping zero-cost-filter'; fi" ]
+    args: [ '-c', "gcloud functions deploy zero-cost-filter --gen2 --runtime=python312 --source=./microservices/zero-cost-filter --entry-point=pre_filter_url --trigger-topic=raw-urls-ingest --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "if [ -f '/workspace/trigger-alpha-loop-func.build_flag' ]; then gcloud functions deploy trigger-alpha-loop-func --gen2 --runtime=python312 --source=./trigger-alpha-loop-func --entry-point=main --trigger-http --allow-unauthenticated --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID; else echo 'Skipping trigger-alpha-loop-func'; fi" ]
+    args: [ '-c', "gcloud functions deploy trigger-alpha-loop-func --gen2 --runtime=python312 --source=./trigger-alpha-loop-func --entry-point=main --trigger-http --allow-unauthenticated --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "if [ -f '/workspace/alpha-loop-job.build_flag' ]; then gcloud run jobs deploy alpha-loop-job --source=./alpha-loop-job --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID; else echo 'Skipping alpha-loop-job'; fi" ]
+    args: [ '-c', "gcloud run jobs deploy alpha-loop-job --source=./alpha-loop-job --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "if [ -f '/workspace/orion-v8-job.build_flag' ]; then gcloud run jobs deploy orion-v8-job --source=./orion-v8-job --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID; else echo 'Skipping orion-v8-job'; fi" ]
+    args: [ '-c', "gcloud run jobs deploy orion-v8-job --source=./orion-v8-job --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "if [ -f '/workspace/orion-macro-analyzer.build_flag' ]; then gcloud run jobs deploy orion-macro-analyzer --source=./microservices/orion-macro-analyzer --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID; else echo 'Skipping orion-macro-analyzer'; fi" ]
+    args: [ '-c', "gcloud run jobs deploy orion-macro-analyzer --source=./microservices/orion-macro-analyzer --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "if [ -f '/workspace/orion-daily-reporter.build_flag' ]; then gcloud run jobs deploy orion-daily-reporter --source=./orion-daily-reporter --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID; else echo 'Skipping orion-daily-reporter'; fi" ]
+    args: [ '-c', "gcloud run jobs deploy orion-daily-reporter --source=./orion-daily-reporter --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "if [ -f '/workspace/orion-monthly-reporter.build_flag' ]; then gcloud run jobs deploy orion-monthly-reporter --source=./orion-monthly-reporter --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID; else echo 'Skipping orion-monthly-reporter'; fi" ]
+    args: [ '-c', "gcloud run jobs deploy orion-monthly-reporter --source=./orion-monthly-reporter --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "if [ -f '/workspace/orion-risk-sentinel.build_flag' ]; then gcloud run jobs deploy orion-risk-sentinel --source=./orion-risk-sentinel --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID; else echo 'Skipping orion-risk-sentinel'; fi" ]
+    args: [ '-c', "gcloud run jobs deploy orion-risk-sentinel --source=./orion-risk-sentinel --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "if [ -f '/workspace/orion-weekly-reporter.build_flag' ]; then gcloud run jobs deploy orion-weekly-reporter --source=./orion-weekly-reporter --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID; else echo 'Skipping orion-weekly-reporter'; fi" ]
+    args: [ '-c', "gcloud run jobs deploy orion-weekly-reporter --source=./orion-weekly-reporter --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
 
 options:
   logging: CLOUD_LOGGING_ONLY
