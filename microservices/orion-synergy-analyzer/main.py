@@ -16,7 +16,8 @@ REPORTS_COLLECTION = "orion-analysis-reports"
 # --- Clients ---
 vertexai.init(project=PROJECT_ID, location=LOCATION)
 db = firestore.Client()
-model = GenerativeModel("gemini-1.5-flash-001")
+# Use a powerful model capable of complex reasoning and following structured prompts
+model = GenerativeModel("gemini-1.5-pro-001")
 
 # --- Data Fetching ---
 def fetch_insight(insight_id: str) -> dict:
@@ -24,18 +25,63 @@ def fetch_insight(insight_id: str) -> dict:
     doc = doc_ref.get()
     if not doc.exists:
         raise FileNotFoundError(f"Insight with id {insight_id} not found.")
-    return doc.to_dict()
+    insight = doc.to_dict()
+    insight['insight_id'] = doc.id # Ensure the ID is part of the dict
+    return insight
 
 def fetch_related_insights(symbol: str, new_insight_id: str) -> list:
     seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
     query = db.collection(INSIGHTS_COLLECTION).where('relevant_tickers', 'array_contains', symbol).where('extracted_at', '>=', seven_days_ago.isoformat()).limit(10)
-    insights = [doc.to_dict() for doc in query.stream() if doc.id != new_insight_id]
+    insights = []
+    for doc in query.stream():
+        if doc.id != new_insight_id:
+            insight = doc.to_dict()
+            insight['insight_id'] = doc.id
+            insights.append(insight)
     return insights
+
+# --- Advanced Prompt Construction ---
+def build_synergy_prompt(new_insight: dict, historical_insights: list) -> str:
+    # Role-based Prompting
+    system_instruction = """
+    あなたは、M&Aのシナジー評価を専門とする、経験豊富なシニアファイナンシャルアナリストです。
+    あなたの任務は、定量的データと定性的なニュースセンチメントの間に存在する複雑な関係を解き明かし、
+    矛盾する情報を特定・分析し、最終的に客観的でデータに基づいた評価を下すことです。
+    思考のプロセスを段階的に説明し、最終的な結論は指定されたJSONスキーマに厳密に従って出力してください。
+    """
+
+    # Chain-of-Thought (CoT) and Contradiction Analysis
+    human_message = f"""
+    **分析対象:**
+    以下の新しいインサイトと、それに関連する過去のインサイトを統合的に分析してください。
+
+    **新しいインサイト:**
+    ```json
+    {json.dumps(new_insight, indent=2, ensure_ascii=False)}
+    ```
+
+    **関連する過去のインサイト（直近7日間）:**
+    ```json
+    {json.dumps(historical_insights, indent=2, ensure_ascii=False)}
+    ```
+
+    **思考連鎖 (Chain-of-Thought) の指示:**
+    1.  **シナジーの特定:** 新しいインサイトと過去のインサイトが、互いの信頼性を高めたり、同じ方向性を示唆したりする点（相乗効果）を全てリストアップしてください。
+    2.  **矛盾の特定:** 新しいインサイトと過去のインサイトが、互いに矛盾したり、相反するシグナルを発したりしている点（矛盾点）を全てリストアップしてください。
+    3.  **総合評価:** 上記のシナジーと矛盾を考慮した上で、この一連の情報が示す、最終的な投資判断への示唆を導き出してください。
+
+    **出力指示:**
+    あなたの分析と思考プロセスに基づき、以下のJSONスキーマに従って、最終的な分析結果のみを出力してください。
+    思考プロセスは出力に含めないでください。
+    """
+    
+    # The full prompt is constructed by the model call which includes the schema
+    return human_message
 
 # --- Main Logic (Pub/Sub Triggered) ---
 @functions_framework.cloud_event
-def analyze_synergy_pubsub_v3(cloud_event):
-    print("Orion Synergy Analyzer (Pub/Sub Function) v3 activated...")
+def synergy_analyzer_v4(cloud_event):
+    print("Orion Synergy Analyzer v4 (Advanced Prompting) activated...")
     try:
         pubsub_message = base64.b64decode(cloud_event.data["message"]["data"]).decode('utf-8')
         message_data = json.loads(pubsub_message)
@@ -55,40 +101,37 @@ def analyze_synergy_pubsub_v3(cloud_event):
             print(f"No other recent insights for {primary_symbol}. No synergy analysis needed.")
             return
 
-        # --- AI Analysis for Synergy ---
-        prompt = f"""
-        あなたは複数の情報を統合して、より高次の洞察を生み出すことに特化した、最高レベルの金融アナリストです。
+        prompt = build_synergy_prompt(new_insight, historical_insights)
+        
+        # --- Structured Output Definition ---
+        output_schema = {
+            "type": "object",
+            "properties": {
+                "synergy_rating": {"type": "number", "description": "情報が互いに強め合う度合い (0.0-1.0)"},
+                "contradiction_rating": {"type": "number", "description": "情報が互いに矛盾する度合い (0.0-1.0)"},
+                "synergy_summary": {"type": "string", "description": "相乗効果の簡潔な要約"},
+                "contradiction_summary": {"type": "string", "description": "矛盾点の簡潔な要約"},
+                "final_assessment": {"type": "string", "description": "総合的な最終評価と投資判断への示唆"}
+            },
+            "required": ["synergy_rating", "contradiction_rating", "synergy_summary", "contradiction_summary", "final_assessment"]
+        }
+        generation_config = GenerationConfig(
+            response_mime_type="application/json",
+            response_schema=output_schema
+        )
 
-        **新しいインサイト:**
-        ```json
-        {json.dumps(new_insight, indent=2, ensure_ascii=False)}
-        ```
-
-        **関連する過去のインサイト（直近7日間）:**
-        ```json
-        {json.dumps(historical_insights, indent=2, ensure_ascii=False)}
-        ```
-
-        **指示:**
-        上記の新しいインサイトと、過去の関連インサイトを統合的に分析してください。そして、以下の項目について評価し、JSON形式で出力してください。
-        1.  `synergy_rating` (number, 0.0 to 1.0): これらの情報が互いに強め合う度合い。0.0は無関係、1.0は極めて強い相乗効果を示す。
-        2.  `contradiction_rating` (number, 0.0 to 1.0): これらの情報が互いに矛盾する度合い。0.0は矛盾なし、1.0は完全な矛盾を示す。
-        3.  `synergy_summary` (string): もし相乗効果がある場合、それはどのようなものか、簡潔に記述してください。（例：「インサイダーの買いと、好調な新製品のニュースが、ポジティブな見通しを裏付けている。」）
-        4.  `contradiction_summary` (string): もし矛盾がある場合、それはどのようなものか、簡潔に記述してください。（例：「経営陣は強気な見通しを示しているが、現場レベルではネガティブな口コミが増加している。」）
-        """
-
-        print("Generating synergy analysis with Gemini...")
-        generation_config = GenerationConfig(response_mime_type="application/json")
+        print("Generating synergy analysis with Gemini 1.5 Pro...")
         analysis_response = model.generate_content(prompt, generation_config=generation_config)
         synergy_data = json.loads(analysis_response.text)
 
         # --- Store Report ---
         report_data = {
-            "type": "synergy_analysis",
+            "type": "synergy_analysis_v4",
             "created_at": firestore.SERVER_TIMESTAMP,
             "primary_insight_id": new_insight_id,
             "primary_symbol": primary_symbol,
-            "synergy_result": synergy_data
+            "synergy_result": synergy_data,
+            "source_insights": [new_insight] + historical_insights # For audit trail
         }
         db.collection(REPORTS_COLLECTION).add(report_data)
         print("Successfully stored synergy analysis report.")
