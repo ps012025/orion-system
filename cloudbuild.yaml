@@ -85,7 +85,7 @@ steps:
       - '--gen2'
       - '--runtime=python312'
       - '--source=.'
-      - '--entry-point=main'
+      - '--entry-point=launch_alpha_loop_job_v2'
       - '--trigger-http'
       - '--no-allow-unauthenticated' # Enforce IAM-based authentication
       - '--region=asia-northeast1'
