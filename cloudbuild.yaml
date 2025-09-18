@@ -1,37 +1,97 @@
-# Orion System v8.2 - CI/CD Pipeline (FORCED DEPLOYMENT - FINAL)
+# Orion System - Final CI/CD Pipeline
+# This configuration ensures each service is built and deployed from its own directory context.
 
 steps:
-# --- orion-sec-fetcher ---
-- name: 'gcr.io/cloud-builders/docker'
-  dir: 'microservices/orion-sec-fetcher'
-  args: [ 'build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA', '.' ]
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA' ]
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: gcloud
-  args: [ 'run', 'deploy', 'orion-sec-fetcher', '--image', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA', '--region', 'asia-northeast1', '--service-account', 'orion-service-account@$PROJECT_ID.iam.gserviceaccount.com', '--allow-unauthenticated' ]
+  # --------------------------------------------------------------------
+  # Service: orion-sec-fetcher (Cloud Run Service)
+  # --------------------------------------------------------------------
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build orion-sec-fetcher'
+    dir: 'microservices/orion-sec-fetcher'
+    args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA', '.']
 
-# --- orion-insight-wrangler ---
-- name: 'gcr.io/cloud-builders/docker'
-  dir: 'orion-insight-wrangler'
-  args: [ 'build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA', '.' ]
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA' ]
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: gcloud
-  args: [ 'run', 'deploy', 'orion-insight-wrangler', '--image', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA', '--region', 'asia-northeast1', '--service-account', 'orion-service-account@$PROJECT_ID.iam.gserviceaccount.com', '--allow-unauthenticated' ]
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push orion-sec-fetcher'
+    args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA']
 
-# --- (This pattern is repeated for all containerized services) ... ---
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Deploy orion-sec-fetcher'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'orion-sec-fetcher'
+      - '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA'
+      - '--region=asia-northeast1'
+      - '--service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--allow-unauthenticated' # NOTE: Changed to unauthenticated for scheduler access. Use VPC/IAM for security.
+      - '--project=$PROJECT_ID'
 
-# --- Cloud Functions ---
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: gcloud
-  args: [ 'functions', 'deploy', 'zero-cost-filter', '--gen2', '--runtime=python312', '--source=./microservices/zero-cost-filter', '--entry-point=pre_filter_url', '--trigger-topic=raw-urls-ingest', '--region=asia-northeast1', '--service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com' ]
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  dir: 'microservices/alpha-loop-launcher'
-  entrypoint: gcloud
-  args: [ 'functions', 'deploy', 'trigger-alpha-loop-func', '--gen2', '--runtime=python312', '--source=.', '--entry-point=main', '--trigger-http', '--allow-unauthenticated', '--region=asia-northeast1', '--service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com' ]
+  # --------------------------------------------------------------------
+  # Service: orion-insight-wrangler (Cloud Run Service)
+  # --------------------------------------------------------------------
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build orion-insight-wrangler'
+    dir: 'microservices/orion-insight-wrangler'
+    args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push orion-insight-wrangler'
+    args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Deploy orion-insight-wrangler'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'orion-insight-wrangler'
+      - '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA'
+      - '--region=asia-northeast1'
+      - '--service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--allow-unauthenticated'
+      - '--project=$PROJECT_ID'
+
+  # --------------------------------------------------------------------
+  # Service: zero-cost-filter (Cloud Function)
+  # --------------------------------------------------------------------
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Deploy zero-cost-filter'
+    entrypoint: 'gcloud'
+    dir: 'microservices/zero-cost-filter' # Set working directory
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'zero-cost-filter'
+      - '--gen2'
+      - '--runtime=python312'
+      - '--source=.' # Source is the current directory
+      - '--entry-point=pre_filter_url'
+      - '--trigger-topic=raw-urls-ingest'
+      - '--region=asia-northeast1'
+      - '--service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--project=$PROJECT_ID'
+
+  # --------------------------------------------------------------------
+  # Service: trigger-alpha-loop-func (Cloud Function)
+  # --------------------------------------------------------------------
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Deploy trigger-alpha-loop-func'
+    entrypoint: 'gcloud'
+    dir: 'microservices/alpha-loop-launcher' # Set working directory
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'trigger-alpha-loop-func'
+      - '--gen2'
+      - '--runtime=python312'
+      - '--source=.' # Source is the current directory
+      - '--entry-point=main'
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      - '--region=asia-northeast1'
+      - '--service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--project=$PROJECT_ID'
 
 options:
   logging: CLOUD_LOGGING_ONLY
-  diskSizeGb: 200
