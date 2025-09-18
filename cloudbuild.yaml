@@ -1,6 +1,5 @@
-# Orion System - Final CI/CD Pipeline
-# This configuration ensures each service is built and deployed from its own directory context.
-
+# Orion System - Hardened CI/CD Pipeline
+# This configuration enforces per-service identity and secure, authenticated deployments.
 steps:
   # --------------------------------------------------------------------
   # Service: orion-sec-fetcher (Cloud Run Service)
@@ -23,8 +22,8 @@ steps:
       - 'orion-sec-fetcher'
       - '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA'
       - '--region=asia-northeast1'
-      - '--service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com'
-      - '--allow-unauthenticated' # NOTE: Changed to unauthenticated for scheduler access. Use VPC/IAM for security.
+      - '--service-account=orion-sec-fetcher-sa@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--no-allow-unauthenticated' # Enforce IAM-based authentication
       - '--project=$PROJECT_ID'
 
   # --------------------------------------------------------------------
@@ -48,8 +47,8 @@ steps:
       - 'orion-insight-wrangler'
       - '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA'
       - '--region=asia-northeast1'
-      - '--service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com'
-      - '--allow-unauthenticated'
+      - '--service-account=orion-insight-wrangler-sa@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--no-allow-unauthenticated' # Enforce IAM-based authentication
       - '--project=$PROJECT_ID'
 
   # --------------------------------------------------------------------
@@ -58,18 +57,18 @@ steps:
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'Deploy zero-cost-filter'
     entrypoint: 'gcloud'
-    dir: 'microservices/zero-cost-filter' # Set working directory
+    dir: 'microservices/zero-cost-filter'
     args:
       - 'functions'
       - 'deploy'
       - 'zero-cost-filter'
       - '--gen2'
       - '--runtime=python312'
-      - '--source=.' # Source is the current directory
+      - '--source=.'
       - '--entry-point=pre_filter_url'
       - '--trigger-topic=raw-urls-ingest'
       - '--region=asia-northeast1'
-      - '--service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--service-account=zero-cost-filter-sa@$PROJECT_ID.iam.gserviceaccount.com'
       - '--project=$PROJECT_ID'
 
   # --------------------------------------------------------------------
@@ -78,20 +77,21 @@ steps:
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'Deploy trigger-alpha-loop-func'
     entrypoint: 'gcloud'
-    dir: 'microservices/alpha-loop-launcher' # Set working directory
+    dir: 'microservices/alpha-loop-launcher'
     args:
       - 'functions'
       - 'deploy'
       - 'trigger-alpha-loop-func'
       - '--gen2'
       - '--runtime=python312'
-      - '--source=.' # Source is the current directory
+      - '--source=.'
       - '--entry-point=main'
       - '--trigger-http'
-      - '--allow-unauthenticated'
+      - '--no-allow-unauthenticated' # Enforce IAM-based authentication
       - '--region=asia-northeast1'
-      - '--service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--service-account=trigger-alpha-loop-func-sa@$PROJECT_ID.iam.gserviceaccount.com'
       - '--project=$PROJECT_ID'
 
 options:
   logging: CLOUD_LOGGING_ONLY
+  diskSizeGb: 200
