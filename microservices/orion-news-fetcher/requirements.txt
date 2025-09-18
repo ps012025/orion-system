@@ -3,5 +3,3 @@ google-cloud-pubsub
 requests
 finnhub-python
 functions-framework
-google-cloud-bigquery
-pandas

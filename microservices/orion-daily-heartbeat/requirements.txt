@@ -4,3 +4,4 @@ PyYAML
 requests
 google-cloud-run
 google-cloud-functions
+functions-framework

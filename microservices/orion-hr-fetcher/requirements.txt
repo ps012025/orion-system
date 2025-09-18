@@ -5,3 +5,4 @@ google-cloud-storage
 requests
 feedparser
 beautifulsoup4
+functions-framework
