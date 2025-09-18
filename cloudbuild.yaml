@@ -10,14 +10,16 @@ steps:
         set -e
         # Compare against the master branch to find changed directories
         CHANGED_DIRS=$(git diff --name-only origin/master HEAD | xargs -n 1 dirname | sort -u)
-        if [ -z "$CHANGED_DIRS" ]; then
+        if [ -z "$$CHANGED_DIRS" ]; then
           echo "No changes detected."
         else
           echo "Detected changes in the following services:"
-          for DIR in $CHANGED_DIRS; do
-            SERVICE_NAME=$(basename "$DIR")
-            echo "- $SERVICE_NAME"
-            touch "/workspace/$SERVICE_NAME.build_flag"
+          for DIR in $$CHANGED_DIRS; do
+            # Extract the service name from the directory path
+            SERVICE_NAME=$(basename "$$DIR")
+            echo "- $$SERVICE_NAME"
+            # Create a flag file for each changed service
+            touch "/workspace/$$SERVICE_NAME.build_flag"
           done
         fi
 
