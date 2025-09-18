@@ -9,7 +9,8 @@ steps:
     - -c
     - |
       set -e
-      # Compare with origin/master to see what has changed.
+      # Fetch the full git history to enable comparing with HEAD~1
+      git fetch --unshallow
       CHANGED_DIRS=$(git diff --name-only HEAD~1 HEAD | xargs -n 1 dirname | sort -u)
       if [ -z "$$CHANGED_DIRS" ]; then
         echo "No changes detected in service directories."
