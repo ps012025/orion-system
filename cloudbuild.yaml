@@ -41,12 +41,6 @@ steps:
     args: [ '-c', "if [ -f '/workspace/trigger-alpha-loop-func.build_flag' ]; then gcloud functions deploy trigger-alpha-loop-func --gen2 --runtime=python312 --source=./trigger-alpha-loop-func --entry-point=main --trigger-http --allow-unauthenticated --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID; else echo 'Skipping trigger-alpha-loop-func'; fi" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "if [ -f '/workspace/orion-estat-fetcher.build_flag' ]; then gcloud functions deploy orion-estat-fetcher --gen2 --runtime=python312 --source=./orion-estat-fetcher --entry-point=main --trigger-http --allow-unauthenticated --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID; else echo 'Skipping orion-estat-fetcher'; fi" ]
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args: [ '-c', "if [ -f '/workspace/orion-gov-fetcher.build_flag' ]; then gcloud functions deploy orion-gov-fetcher --gen2 --runtime=python312 --source=./orion-gov-fetcher --entry-point=main --trigger-http --allow-unauthenticated --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID; else echo 'Skipping orion-gov-fetcher'; fi" ]
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
     args: [ '-c', "if [ -f '/workspace/alpha-loop-job.build_flag' ]; then gcloud run jobs deploy alpha-loop-job --source=./alpha-loop-job --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID; else echo 'Skipping alpha-loop-job'; fi" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
