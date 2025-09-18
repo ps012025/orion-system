@@ -31,7 +31,7 @@ steps:
   # --------------------------------------------------------------------
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Build orion-insight-wrangler'
-    dir: 'microservices/orion-insight-wrangler'
+    dir: 'orion-insight-wrangler'
     args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA', '.']
 
   - name: 'gcr.io/cloud-builders/docker'
