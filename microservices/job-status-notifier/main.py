@@ -1,6 +1,7 @@
 import os
-import functions_framework
 import json
+import base64
+import functions_framework
 import requests
 
 # --- Notification Function ---
@@ -25,25 +26,20 @@ def send_slack_notification(text: str):
     except Exception as e:
         print(f"ERROR: Failed to request Slack notification: {e}")
 
-@functions_framework.http
-def job_status_notifier_http(request):
+@functions_framework.cloud_event
+def job_status_notifier_pubsub(cloud_event):
     """
-    Triggered by an HTTP POST from Eventarc. This function parses the event
+    Triggered by a CloudEvent from Pub/Sub. This function parses the event
     from Vertex AI and sends a Slack notification.
     """
-    print("Job status notifier (HTTP) triggered.")
+    print("Job status notifier (Pub/Sub) v2 activated...")
     try:
-        # The event payload is the entire request body as JSON
-        event_data = request.get_json()
-        if not event_data:
-            print("Request body is empty or not valid JSON.")
-            return "Bad Request", 400
+        message_data_str = base64.b64decode(cloud_event.data["message"]["data"]).decode('utf-8')
+        event_data = json.loads(message_data_str)
 
-        # Extract relevant details from the Vertex AI event payload
-        # The structure is slightly different for direct HTTP events from Eventarc
-        job_state = event_data.get("data", {}).get("resource", {}).get("state", "UNKNOWN_STATE")
-        job_name = event_data.get("data", {}).get("resource", {}).get("displayName", "Unknown Job")
-        error_message = event_data.get("data", {}).get("resource", {}).get("error", {}).get("message", "No error details.")
+        job_state = event_data.get("resource", {}).get("state", "UNKNOWN_STATE")
+        job_name = event_data.get("resource", {}).get("displayName", "Unknown Job")
+        error_message = event_data.get("resource", {}).get("error", {}).get("message", "No error details.")
 
         print(f"Received status '{job_state}' for job '{job_name}'.")
 
@@ -53,7 +49,7 @@ def job_status_notifier_http(request):
             slack_message = f":x: *【Orion】Alpha Generation Loopが失敗しました。*\n> Job Name: `{job_name}`\n> Error: ```{error_message}```"
         else:
             print(f"Ignoring non-terminal job state: {job_state}")
-            return "OK", 200
+            return "OK", 200 # Return 200 to prevent Eventarc from retrying
 
         send_slack_notification(slack_message)
         return "OK", 200
