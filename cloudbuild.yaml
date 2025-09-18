@@ -3,40 +3,40 @@ steps:
   # --- Deployment Steps (Unconditional) ---
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "gcloud run deploy orion-sec-fetcher --source=./orion-sec-fetcher --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID" ]
+    args: [ '-c', "gcloud run deploy orion-sec-fetcher --source=./microservices/orion-sec-fetcher --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args: [ '-c', "gcloud run deploy orion-insight-wrangler --source=./orion-insight-wrangler --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "gcloud run deploy orion-report-mailer --source=./orion-report-mailer --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID" ]
+    args: [ '-c', "gcloud run deploy orion-report-mailer --source=./orion-services/orion-reporting-agent --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID" ] # Path corrected
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args: [ '-c', "gcloud functions deploy zero-cost-filter --gen2 --runtime=python312 --source=./microservices/zero-cost-filter --entry-point=pre_filter_url --trigger-topic=raw-urls-ingest --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "gcloud functions deploy trigger-alpha-loop-func --gen2 --runtime=python312 --source=./trigger-alpha-loop-func --entry-point=main --trigger-http --allow-unauthenticated --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
+    args: [ '-c', "gcloud functions deploy trigger-alpha-loop-func --gen2 --runtime=python312 --source=./microservices/alpha-loop-launcher --entry-point=main --trigger-http --allow-unauthenticated --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ] # Path corrected
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "gcloud run jobs deploy alpha-loop-job --source=./alpha-loop-job --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
+    args: [ '-c', "gcloud run jobs deploy alpha-loop-job --source=./alpha_generation_loop --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ] # Path corrected
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "gcloud run jobs deploy orion-v8-job --source=./orion-v8-job --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
+    args: [ '-c', "gcloud run jobs deploy orion-v8-job --source=./orion-system --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ] # Path corrected, assuming orion-v8-job is in orion-system
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args: [ '-c', "gcloud run jobs deploy orion-macro-analyzer --source=./microservices/orion-macro-analyzer --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "gcloud run jobs deploy orion-daily-reporter --source=./orion-daily-reporter --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
+    args: [ '-c', "gcloud run jobs deploy orion-daily-reporter --source=./orion-services/orion-reporting-agent --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ] # Path corrected
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "gcloud run jobs deploy orion-monthly-reporter --source=./orion-monthly-reporter --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
+    args: [ '-c', "gcloud run jobs deploy orion-monthly-reporter --source=./orion-services/orion-monthly-strategist --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ] # Path corrected
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "gcloud run jobs deploy orion-risk-sentinel --source=./orion-risk-sentinel --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
+    args: [ '-c', "gcloud run jobs deploy orion-risk-sentinel --source=./microservices/orion-risk-sentinel --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    args: [ '-c', "gcloud run jobs deploy orion-weekly-reporter --source=./orion-weekly-reporter --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
+    args: [ '-c', "gcloud run jobs deploy orion-weekly-reporter --source=./microservices/orion-weekly-strategist --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ] # Path corrected
 
 options:
   logging: CLOUD_LOGGING_ONLY
