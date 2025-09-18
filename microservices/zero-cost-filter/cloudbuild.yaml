@@ -1,0 +1,17 @@
+# Service-specific pipeline for zero-cost-filter
+steps:
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  id: 'Deploy'
+  entrypoint: 'gcloud'
+  args:
+    - 'functions'
+    - 'deploy'
+    - 'zero-cost-filter'
+    - '--gen2'
+    - '--runtime=python312'
+    - '--source=.'
+    - '--entry-point=pre_filter_url'
+    - '--trigger-topic=raw-urls-ingest'
+    - '--region=asia-northeast1'
+    - '--service-account=zero-cost-filter-sa@$PROJECT_ID.iam.gserviceaccount.com'
+    - '--project=$PROJECT_ID'

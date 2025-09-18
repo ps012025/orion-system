@@ -1,37 +1,42 @@
-# Orion System - Hardened CI/CD Pipeline (Final Path Correction)
+# Orion System - Final CI/CD Dispatcher Pipeline
+# This pipeline identifies changed microservices and triggers their specific builds.
 steps:
-  # --- orion-sec-fetcher ---
-  - name: 'gcr.io/cloud-builders/docker'
-    dir: 'microservices/orion-sec-fetcher'
-    args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA', '.']
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA']
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
-    args: ['run', 'deploy', 'orion-sec-fetcher', '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA', '--region=asia-northeast1', '--service-account=orion-sec-fetcher-sa@$PROJECT_ID.iam.gserviceaccount.com', '--no-allow-unauthenticated']
+- name: 'gcr.io/cloud-builders/git'
+  id: 'Fetch git history'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    # Cloud Build performs a shallow clone. We need more history to diff against the previous commit.
+    git fetch --depth=2 origin master
 
-  # --- orion-insight-wrangler ---
-  - name: 'gcr.io/cloud-builders/docker'
-    dir: 'orion-services/orion-insight-wrangler' # Corrected Path
-    args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA', '.']
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA']
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
-    args: ['run', 'deploy', 'orion-insight-wrangler', '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA', '--region=asia-northeast1', '--service-account=orion-insight-wrangler-sa@$PROJECT_ID.iam.gserviceaccount.com', '--no-allow-unauthenticated']
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: 'Identify and deploy changed services'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    # Get a list of directories that have changed compared to the previous commit.
+    CHANGED_DIRS=$(git diff --name-only HEAD^ HEAD | xargs -n 1 dirname | sort -u)
 
-  # --- (Other services would follow the same corrected pattern) ... ---
+    echo "===================================================="
+    echo "Changed directories detected: $${CHANGED_DIRS}"
+    echo "===================================================="
 
-  # --- Cloud Functions ---
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    dir: 'microservices/zero-cost-filter'
-    entrypoint: gcloud
-    args: ['functions', 'deploy', 'zero-cost-filter', '--gen2', '--runtime=python312', '--source=.', '--entry-point=pre_filter_url', '--trigger-topic=raw-urls-ingest', '--region=asia-northeast1', '--service-account=zero-cost-filter-sa@$PROJECT_ID.iam.gserviceaccount.com']
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    dir: 'microservices/alpha-loop-launcher'
-    entrypoint: gcloud
-    args: ['functions', 'deploy', 'trigger-alpha-loop-func', '--gen2', '--runtime=python312', '--source=.', '--entry-point=launch_alpha_loop_job_v2', '--trigger-http', '--no-allow-unauthenticated', '--region=asia-northeast1', '--service-account=trigger-alpha-loop-func-sa@$PROJECT_ID.iam.gserviceaccount.com']
+    for dir in $${CHANGED_DIRS}; do
+      # Check if a cloudbuild.yaml exists in the changed directory, indicating it's a deployable service.
+      if [ -f "$${dir}/cloudbuild.yaml" ]; then
+        echo "--> Change detected in '$${dir}', triggering build..."
+        gcloud builds submit "$${dir}" \
+          --config="$${dir}/cloudbuild.yaml" \
+          --substitutions=COMMIT_SHA=$COMMIT_SHA \
+          --project=$PROJECT_ID
+      else
+        echo "--> Change detected in '$${dir}', but no cloudbuild.yaml found. Skipping."
+      fi
+    done
+
+    echo "All changed services have been processed."
 
 options:
   logging: CLOUD_LOGGING_ONLY
-  diskSizeGb: 200
