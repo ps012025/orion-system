@@ -20,17 +20,22 @@ model = GenerativeModel("gemini-1.5-flash-001")
 
 # --- Data Fetching ---
 def fetch_insight(insight_id: str) -> dict:
-    # ... (logic remains the same)
-    pass
+    doc_ref = db.collection(INSIGHTS_COLLECTION).document(insight_id)
+    doc = doc_ref.get()
+    if not doc.exists:
+        raise FileNotFoundError(f"Insight with id {insight_id} not found.")
+    return doc.to_dict()
 
-def fetch_related_insights(symbol: str) -> list:
-    # ... (logic remains the same)
-    pass
+def fetch_related_insights(symbol: str, new_insight_id: str) -> list:
+    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    query = db.collection(INSIGHTS_COLLECTION).where('relevant_tickers', 'array_contains', symbol).where('extracted_at', '>=', seven_days_ago.isoformat()).limit(10)
+    insights = [doc.to_dict() for doc in query.stream() if doc.id != new_insight_id]
+    return insights
 
 # --- Main Logic (Pub/Sub Triggered) ---
 @functions_framework.cloud_event
 def analyze_synergy_pubsub(cloud_event):
-    print("Orion Synergy Analyzer (Pub/Sub Function) activated...")
+    print("Orion Synergy Analyzer (Pub/Sub Function) v2 activated...")
     try:
         pubsub_message = base64.b64decode(cloud_event.data["message"]["data"]).decode('utf-8')
         message_data = json.loads(pubsub_message)
@@ -45,9 +50,24 @@ def analyze_synergy_pubsub(cloud_event):
         if not primary_symbol:
             return
 
-        # ... (The rest of the synergy analysis logic remains the same) ...
+        historical_insights = fetch_related_insights(primary_symbol, new_insight_id)
+        if not historical_insights:
+            print(f"No other recent insights for {primary_symbol}. No synergy analysis needed.")
+            return
 
-        print("Synergy analysis completed.")
+        prompt = f"..."
+        analysis_response = model.generate_content(prompt)
+        synergy_data = json.loads(analysis_response.text)
+
+        report_data = {
+            "type": "synergy_analysis",
+            "created_at": firestore.SERVER_TIMESTAMP,
+            "primary_insight_id": new_insight_id,
+            "primary_symbol": primary_symbol,
+            "synergy_result": synergy_data
+        }
+        db.collection(REPORTS_COLLECTION).add(report_data)
+        print("Successfully stored synergy analysis report.")
 
     except FileNotFoundError as e:
         print(f"ERROR: Could not find the triggering insight document: {e}")
