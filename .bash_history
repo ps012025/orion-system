@@ -1,4 +1,3 @@
-gcloud run deploy orion-insight-wrangler   --source .   --region=asia-northeast1   --allow-unauthenticated   --project=thinking-orb-438805-q7
 gcloud pubsub topics publish orion-input-topic --message='{"url": "https://www.bloomberg.co.jp/news/articles/2025-09-08/T1ZIYQGOYMTH00"}'
 nano Dockerfile
 gcloud run deploy orion-insight-wrangler   --source .   --region=asia-northeast1   --allow-unauthenticated   --project=thinking-orb-438805-q7
@@ -498,3 +497,4 @@ gs://orion-market-data-lake-v1/
 gs://project-orion-admins-orion-raw-storage/
 gs://project-orion-admins_cloudbuild/
 gs://run-sources-project-orion-admins-asia-northeast1/
+project-orion-admins

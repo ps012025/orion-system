@@ -1,0 +1,3 @@
+
+
+d635672d9606792e15e7db2feae98dd724353d09	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/@google/gemini-cli/-/gemini-cli-0.5.3.tgz","integrity":"sha512-NyiRCzv5kPtpHEUTSiNzj7uLDqGLFKDJ9jebpAGbNP6psxOkS5DOPcpOAqWf8+Du1fwqjr9kKLqch8dZRXoA5Q==","time":1758156535254,"size":754178,"metadata":{"time":1758156531894,"url":"https://registry.npmjs.org/@google/gemini-cli/-/gemini-cli-0.5.3.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, must-revalidate, max-age=31557600","content-type":"application/octet-stream","date":"Thu, 18 Sep 2025 00:48:51 GMT","etag":"\"188e7599dcbbb2d44422b921bc525624\"","last-modified":"Wed, 17 Sep 2025 20:37:15 GMT","vary":"Accept-Encoding"},"options":{"compress":true}}}

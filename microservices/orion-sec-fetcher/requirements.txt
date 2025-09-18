@@ -3,3 +3,4 @@ google-cloud-pubsub
 requests
 feedparser
 functions-framework
+yaml

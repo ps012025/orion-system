@@ -1,5 +1,14 @@
-google-cloud-bigquery
-google-cloud-firestore
-google-cloud-aiplatform
-backtesting
-pandas
+# requirements.txt
+
+# データ操作とGCS/Parquet I/O
+pandas==2.2.2
+pyarrow==16.1.0
+gcsfs==2024.3.1
+
+# GCPサービス連携
+google-cloud-firestore==2.16.0
+google-cloud-aiplatform==1.52.0
+google-cloud-storage==2.16.0
+
+# バックテストエンジン
+backtesting==0.3.3

@@ -81,6 +81,10 @@ def synthesize_weekly_review(analyses, performances, core_thesis):
 
     print("Generating final strategic review with Gemini Pro...")
     response = model.generate_content(prompt)
+    # --- Token Count Logging ---
+    usage_metadata = response.usage_metadata
+    print(f"Vertex AI Token Usage: {usage_metadata.total_tokens} tokens (Prompt: {usage_metadata.prompt_token_count}, Output: {usage_metadata.candidates_token_count})")
+    # --- End Token Count Logging ---
     return response.text
 
 # --- Reporting ---

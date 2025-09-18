@@ -43,6 +43,10 @@ def extract_hr_insight(hr_text: str) -> dict:
         # Use the SDK with a JSON response type for robust parsing
         generation_config = GenerationConfig(response_mime_type="application/json")
         response = model.generate_content(final_prompt, generation_config=generation_config)
+        # --- Token Count Logging ---
+        usage_metadata = response.usage_metadata
+        print(f"Vertex AI Token Usage: {usage_metadata.total_tokens} tokens (Prompt: {usage_metadata.prompt_token_count}, Output: {usage_metadata.candidates_token_count})")
+        # --- End Token Count Logging ---
         insight_data = json.loads(response.text)
     except (ValueError, json.JSONDecodeError) as e:
         print(f"Error during HR insight extraction with Vertex AI SDK: {e}")
