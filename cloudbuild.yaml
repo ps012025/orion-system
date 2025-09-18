@@ -8,7 +8,7 @@ steps:
   - '-c'
   - |
     # Cloud Build performs a shallow clone. We need more history to diff against the previous commit.
-    git fetch --depth=2 origin master
+    git fetch --unshallow
 
 - name: 'gcr.io/cloud-builders/gcloud'
   id: 'Identify and deploy changed services'
@@ -17,7 +17,7 @@ steps:
   - '-c'
   - |
     # Get a list of directories that have changed compared to the previous commit.
-    CHANGED_DIRS=$(git diff --name-only HEAD^ HEAD | xargs -n 1 dirname | sort -u)
+    CHANGED_DIRS=$(git diff --name-only HEAD~1 HEAD | xargs -n 1 dirname | sort -u)
 
     echo "===================================================="
     echo "Changed directories detected: $${CHANGED_DIRS}"
@@ -45,3 +45,4 @@ steps:
 
 options:
   logging: CLOUD_LOGGING_ONLY
+  diskSizeGb: 200
