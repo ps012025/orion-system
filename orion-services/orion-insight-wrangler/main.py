@@ -148,6 +148,7 @@ def process_url(cloud_event):
             index_endpoint.upsert_datapoints(index_id=DEPLOYED_INDEX_ID, datapoints=[{"datapoint_id": doc_id, "feature_vector": text_vector}])
         
         print(f"Successfully processed and stored insight for URL: {url}")
+        publish_insight_notification(insight['insight_id'])
         return "OK", 200
 
     except Exception as e:

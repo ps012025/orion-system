@@ -1,5 +1,6 @@
 {
     "chat.commandCenter.enabled": false,
+    "window.menuBarVisibility": "classic",
     "window.commandCenter": true,
     "http.proxySupport": "off",
     "workbench.startupEditor": "welcomePageInEmptyWorkbench",
@@ -7,6 +8,5 @@
     "workbench.layoutControl.enabled": false,
     "window.autoDetectColorScheme": true,
     "geminicodeassist.beta.enableCodeDocumentationView": false,
-    "geminicodeassist.project": "cloudshell-gca",
-    "terminal.integrated.defaultProfile.linux": "Google Cloud Shell"
+    "geminicodeassist.project": "cloudshell-gca"
 }

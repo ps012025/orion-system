@@ -498,3 +498,5 @@ gs://project-orion-admins-orion-raw-storage/
 gs://project-orion-admins_cloudbuild/
 gs://run-sources-project-orion-admins-asia-northeast1/
 project-orion-admins
+gcloud run deploy orion-macro-analyzer   --source=./microservices/orion-macro-analyzer/   --region=asia-northeast1   --service-account=orion-service-account@project-orion-admins.iam.gserviceaccount.com   --no-allow-unauthenticated   --set-env-vars=GCP_PROJECT=project-orion-admins
+gcloud run deploy orion-macro-analyzer   --source=./microservices/orion-macro-analyzer/   --region=asia-northeast1   --service-account=orion-service-account@project-orion-admins.iam.gserviceaccount.com   --no-allow-unauthenticated   --set-env-vars=GCP_PROJECT=project-orion-admins

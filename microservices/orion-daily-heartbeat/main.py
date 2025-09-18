@@ -2,7 +2,8 @@ import os
 import yaml
 import requests
 from flask import Flask, jsonify
-from google.cloud import run_v2
+from google.cloud import run_v2, functions_v2
+from datetime import datetime
 
 # --- Initialization ---
 app = Flask(__name__)
@@ -49,58 +50,52 @@ def handle_request():
             return jsonify({"error": "GCP_PROJECT environment variable not set."}), 500
 
         region = "asia-northeast1"
+        parent = f"projects/{project_id}/locations/{region}"
         
-        health_results = []
-        
-        # Use the Cloud Run Admin API client to list services
+        # --- Get all deployed services (Cloud Run & Cloud Functions) ---
+        deployed_service_urls = {}
         try:
+            # Cloud Run services
             run_client = run_v2.ServicesClient()
-            parent = f"projects/{project_id}/locations/{region}"
-            request = run_v2.ListServicesRequest(parent=parent)
-            deployed_services = run_client.list_services(request=request)
-            deployed_service_names = {s.name.split('/')[-1] for s in deployed_services}
+            run_request = run_v2.ListServicesRequest(parent=parent)
+            for service in run_client.list_services(request=run_request):
+                service_name = service.name.split('/')[-1]
+                deployed_service_urls[service_name] = service.uri
+            
+            # Cloud Functions services
+            func_client = functions_v2.FunctionServiceClient()
+            func_request = functions_v2.ListFunctionsRequest(parent=parent)
+            for func in func_client.list_functions(request=func_request):
+                # The service name in Cloud Run is the same as the function name
+                service_name = func.name.split('/')[-1]
+                deployed_service_urls[service_name] = func.service_config.uri
         except Exception as e:
-            print(f"Warning: Could not list deployed Cloud Run services via API: {e}. Proceeding with static list.")
-            deployed_service_names = set()
+            print(f"Warning: Could not list all deployed services via API: {e}. Health check may be incomplete.")
 
-        print(f"Pinging {len(agents)} services defined in config...")
+        print(f"Found {len(deployed_service_urls)} deployed services. Pinging...")
 
+        health_results = []
         for agent in agents:
             service_name = agent.get('serviceName')
-            if not service_name:
+            if not service_name or service_name not in deployed_service_urls:
                 continue
 
-            if service_name not in deployed_service_names:
-                print(f"  - Skipping {service_name}: Not found as a deployed Cloud Run service.")
-                continue
-
-            url = f"https://{service_name}-{project_id}.{region}.run.app"
-            status = ""
-            status_code = 0
+            url = deployed_service_urls[service_name]
+            status, status_code = "", 0
             
             try:
-                response = requests.get(url, timeout=10)
+                # Use a HEAD request for a lightweight health check
+                response = requests.head(url, timeout=10, allow_redirects=True)
                 status_code = response.status_code
-                if 200 <= status_code < 500:
-                    status = "OK"
-                else:
-                    status = "UNHEALTHY"
+                status = "OK" # Any response means the service is up
             except requests.exceptions.Timeout:
-                status = "TIMEOUT"
-                status_code = -1
+                status, status_code = "TIMEOUT", -1
             except requests.exceptions.ConnectionError:
-                status = "CONNECTION_ERROR"
-                status_code = -2
+                status, status_code = "CONNECTION_ERROR", -2
             except Exception as e:
-                status = f"UNKNOWN_ERROR: {e}"
-                status_code = -3
+                status, status_code = f"UNKNOWN_ERROR", -3
 
-            result = {
-                "serviceName": service_name,
-                "status": status,
-                "http_code": status_code,
-                "url": url
-            }
+            result = {"serviceName": service_name, "status": status, "http_code": status_code, "url": url}
             print(f"  - {result}")
             health_results.append(result)
 

@@ -82,6 +82,8 @@ def gov_fetcher_http(request):
                 
                 future = publisher.publish(output_topic_path, data=message_data)
                 future.get(timeout=30)
+                # Notify synergy analyzer
+                publisher.publish(publisher.topic_path(PROJECT_ID, 'new-atomic-insight-created'), data=json.dumps({'insight_id': 'YOUR_INSIGHT_ID'}).encode('utf-8'))
                 print(f"    - Published: {title}")
             
             # Update the last seen ID to the newest entry from this batch

@@ -99,6 +99,8 @@ def hr_fetcher_http(request):
                     file_id = hashlib.md5(entry.id.encode()).hexdigest()
                     filename = f"{feed_name}_{file_id}.txt"
                     save_text_to_gcs(job_text, filename)
+                    # Notify synergy analyzer
+                    publisher.publish(publisher.topic_path(PROJECT_ID, 'new-atomic-insight-created'), data=json.dumps({'insight_id': 'YOUR_INSIGHT_ID'}).encode('utf-8'))
             
             set_last_seen_id(feed_url, new_entries[0].id)
 

@@ -1,0 +1,5 @@
+# /orion-services/orion-portfolio-manager/requirements.txt
+# functions-frameworkを削除し、gunicornを追加
+gunicorn==22.0.0
+google-cloud-firestore==2.16.0
+Flask==3.0.3

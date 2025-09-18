@@ -68,6 +68,8 @@ def fetch_and_publish_new_filings(cik: str, company_symbol: str):
                 
                 future = publisher.publish(output_topic_path, data=message_data)
                 future.get(timeout=30)
+                # Notify synergy analyzer
+                publisher.publish(publisher.topic_path(PROJECT_ID, 'new-atomic-insight-created'), data=json.dumps({'insight_id': 'YOUR_INSIGHT_ID'}).encode('utf-8'))
                 published_count += 1
 
             if filing_time > latest_filing_time:

@@ -3,3 +3,4 @@ gunicorn
 PyYAML
 requests
 google-cloud-run
+google-cloud-functions
