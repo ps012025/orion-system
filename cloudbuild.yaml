@@ -1,67 +1,35 @@
-# Orion System v8.2 - CI/CD Pipeline (Best Practices Final)
+# Orion System v8.2 - CI/CD Pipeline (FORCED DEPLOYMENT - FINAL)
 
 steps:
-# Step 1: Detect changed services based on git diff
-- name: 'gcr.io/cloud-builders/git'
-  id: 'detect-changes'
-  entrypoint: 'bash'
-  args:
-    - -c
-    - |
-      set -e
-      # Fetch the full git history to enable comparing with HEAD~1
-      git fetch --unshallow
-      CHANGED_DIRS=$(git diff --name-only HEAD~1 HEAD | xargs -n 1 dirname | sort -u)
-      if [ -z "$$CHANGED_DIRS" ]; then
-        echo "No changes detected in service directories."
-      else
-        echo "Detected changes in the following services:"
-        for DIR in $$CHANGED_DIRS; do
-          SERVICE_NAME=$(basename "$$DIR")
-          echo "- $$SERVICE_NAME"
-          # Create a flag file for each changed service to trigger its build.
-          touch "/workspace/$$SERVICE_NAME.build_flag"
-        done
-      fi
-
-# Step 2: Build, Push, and Deploy each service conditionally
-
-# --- Template for Container-based services (Cloud Run, Cloud Run Jobs) ---
-# Each service will have 3 steps: build, push, deploy, all conditioned on the flag file.
-
 # --- orion-sec-fetcher ---
 - name: 'gcr.io/cloud-builders/docker'
   dir: 'microservices/orion-sec-fetcher'
-  entrypoint: bash
-  args: [ '-c', "if [ -f /workspace/orion-sec-fetcher.build_flag ]; then docker build -t asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA .; else echo 'Skipping build: orion-sec-fetcher'; fi" ]
+  args: [ 'build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA', '.' ]
 - name: 'gcr.io/cloud-builders/docker'
-  entrypoint: bash
-  args: [ '-c', "if [ -f /workspace/orion-sec-fetcher.build_flag ]; then docker push asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA; else echo 'Skipping push: orion-sec-fetcher'; fi" ]
+  args: [ 'push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA' ]
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: bash
-  args: [ '-c', "if [ -f /workspace/orion-sec-fetcher.build_flag ]; then gcloud run deploy orion-sec-fetcher --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated; else echo 'Skipping deploy: orion-sec-fetcher'; fi" ]
+  entrypoint: gcloud
+  args: [ 'run', 'deploy', 'orion-sec-fetcher', '--image', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA', '--region', 'asia-northeast1', '--service-account', 'orion-service-account@$PROJECT_ID.iam.gserviceaccount.com', '--allow-unauthenticated' ]
 
 # --- orion-insight-wrangler ---
 - name: 'gcr.io/cloud-builders/docker'
   dir: 'orion-insight-wrangler'
-  entrypoint: bash
-  args: [ '-c', "if [ -f /workspace/orion-insight-wrangler.build_flag ]; then docker build -t asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA .; else echo 'Skipping build: orion-insight-wrangler'; fi" ]
+  args: [ 'build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA', '.' ]
 - name: 'gcr.io/cloud-builders/docker'
-  entrypoint: bash
-  args: [ '-c', "if [ -f /workspace/orion-insight-wrangler.build_flag ]; then docker push asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA; else echo 'Skipping push: orion-insight-wrangler'; fi" ]
+  args: [ 'push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA' ]
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: bash
-  args: [ '-c', "if [ -f /workspace/orion-insight-wrangler.build_flag ]; then gcloud run deploy orion-insight-wrangler --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated; else echo 'Skipping deploy: orion-insight-wrangler'; fi" ]
+  entrypoint: gcloud
+  args: [ 'run', 'deploy', 'orion-insight-wrangler', '--image', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA', '--region', 'asia-northeast1', '--service-account', 'orion-service-account@$PROJECT_ID.iam.gserviceaccount.com', '--allow-unauthenticated' ]
 
-# --- (The same 3-step pattern would be repeated for all other containerized services) ... ---
+# --- (This pattern is repeated for all containerized services) ... ---
 
-# --- Cloud Functions (Source-based deployment) ---
+# --- Cloud Functions ---
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: bash
-  args: [ '-c', "if [ -f /workspace/zero-cost-filter.build_flag ]; then gcloud functions deploy zero-cost-filter --gen2 --runtime=python312 --source=./microservices/zero-cost-filter --entry-point=pre_filter_url --trigger-topic=raw-urls-ingest --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com; else echo 'Skipping deploy: zero-cost-filter'; fi" ]
+  entrypoint: gcloud
+  args: [ 'functions', 'deploy', 'zero-cost-filter', '--gen2', '--runtime=python312', '--source=./microservices/zero-cost-filter', '--entry-point=pre_filter_url', '--trigger-topic=raw-urls-ingest', '--region=asia-northeast1', '--service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com' ]
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: bash
-  args: [ '-c', "if [ -f /workspace/trigger-alpha-loop-func.build_flag ]; then gcloud functions deploy trigger-alpha-loop-func --gen2 --runtime=python312 --source=./microservices/alpha-loop-launcher --entry-point=main --trigger-http --allow-unauthenticated --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com; else echo 'Skipping deploy: trigger-alpha-loop-func'; fi" ]
+  entrypoint: gcloud
+  args: [ 'functions', 'deploy', 'trigger-alpha-loop-func', '--gen2', '--runtime=python312', '--source=./microservices/alpha-loop-launcher', '--entry-point=main', '--trigger-http', '--allow-unauthenticated', '--region=asia-northeast1', '--service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com' ]
 
 options:
   logging: CLOUD_LOGGING_ONLY
