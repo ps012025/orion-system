@@ -1,26 +1,30 @@
 steps:
-# 1. Build the container image
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:latest', './microservices/orion-sec-fetcher']
+# ... (previous steps remain the same) ...
 
-# 2. Push the container image to Artifact Registry
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:latest']
-
-# 3. Deploy the container image to Cloud Run
+# Deploy orion-insight-wrangler with more memory
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: gcloud
   args: [
-    'run', 'deploy', 'orion-sec-fetcher',
-    '--image', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:latest',
-    '--region', 'asia-northeast1',
-    '--service-account', 'orion-service-account@$PROJECT_ID.iam.gserviceaccount.com',
-    '--no-allow-unauthenticated',
-    '--set-env-vars=GCP_PROJECT=$PROJECT_ID'
+    'run', 'deploy', 'orion-insight-wrangler',
+    '--image', '...',
+    '--memory', '512Mi', # Increased memory
+    # ... (other args)
   ]
 
-images:
-- 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:latest'
+# Deploy orion-job-sentiment-analyzer with more memory
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args: [
+    'functions', 'deploy', 'orion-job-sentiment-analyzer',
+    '--memory', '512Mi', # Increased memory
+    # ... (other args)
+  ]
 
-options:
-  logging: CLOUD_LOGGING_ONLY
+# Deploy orion-synergy-analyzer with more memory
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args: [
+    'functions', 'deploy', 'orion-synergy-analyzer',
+    '--memory', '512Mi', # Increased memory
+    # ... (other args)
+  ]
