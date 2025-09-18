@@ -1,42 +1,155 @@
-# Orion System v8.2 - Monorepo-Aware CI/CD Pipeline (FORCED DEPLOYMENT)
+# Orion System v8.2 - CI/CD Pipeline (Best Practices)
+
 steps:
-  # --- Deployment Steps (Unconditional) ---
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args: [ '-c', "gcloud run deploy orion-sec-fetcher --source=./microservices/orion-sec-fetcher --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID --clear-base-image" ]
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args: [ '-c', "gcloud run deploy orion-insight-wrangler --source=./orion-insight-wrangler --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID --clear-base-image" ]
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args: [ '-c', "gcloud run deploy orion-report-mailer --source=./orion-services/orion-reporting-agent --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID --clear-base-image" ]
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args: [ '-c', "gcloud functions deploy zero-cost-filter --gen2 --runtime=python312 --source=./microservices/zero-cost-filter --entry-point=pre_filter_url --trigger-topic=raw-urls-ingest --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args: [ '-c', "gcloud functions deploy trigger-alpha-loop-func --gen2 --runtime=python312 --source=./microservices/alpha-loop-launcher --entry-point=main --trigger-http --allow-unauthenticated --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID" ]
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args: [ '-c', "gcloud run jobs deploy alpha-loop-job --source=./alpha_generation_loop --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID --clear-base-image" ]
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args: [ '-c', "gcloud run jobs deploy orion-v8-job --source=./orion-system --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID --clear-base-image" ]
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args: [ '-c', "gcloud run jobs deploy orion-macro-analyzer --source=./microservices/orion-macro-analyzer --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID --clear-base-image" ]
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args: [ '-c', "gcloud run jobs deploy orion-daily-reporter --source=./orion-services/orion-reporting-agent --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID --clear-base-image" ]
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args: [ '-c', "gcloud run jobs deploy orion-monthly-reporter --source=./orion-services/orion-monthly-strategist --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID --clear-base-image" ]
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args: [ '-c', "gcloud run jobs deploy orion-risk-sentinel --source=./microservices/orion-risk-sentinel --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID --clear-base-image" ]
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args: [ '-c', "gcloud run jobs deploy orion-weekly-reporter --source=./microservices/orion-weekly-strategist --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID --clear-base-image" ]
+# Step 1: Detect changed services
+- name: 'gcr.io/cloud-builders/git'
+  id: 'detect-changes'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      set -e
+      CHANGED_DIRS=$(git diff --name-only origin/master HEAD | xargs -n 1 dirname | sort -u)
+      if [ -z "$$CHANGED_DIRS" ]; then
+        echo "No changes detected."
+      else
+        echo "Detected changes in the following services:"
+        for DIR in $$CHANGED_DIRS; do
+          SERVICE_NAME=$(basename "$$DIR")
+          echo "- $$SERVICE_NAME"
+          touch "/workspace/$$SERVICE_NAME.build_flag"
+        done
+      fi
+
+# --- Deployment Steps for Containerized Services ---
+
+# Helper function for Docker-based services
+- name: 'gcr.io/cloud-builders/docker'
+  id: 'build-and-push-helper'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      service_name="$$0"
+      service_dir="$$1"
+      if [ -f "/workspace/$${service_name}.build_flag" ]; then
+        echo "Building and pushing image for $${service_name}"
+        docker build -t asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/$${service_name}:$COMMIT_SHA $${service_dir}
+        docker push asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/$${service_name}:$COMMIT_SHA
+      else
+        echo "Skipping build and push for $${service_name}"
+      fi
+  args: ['orion-sec-fetcher', './microservices/orion-sec-fetcher']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['orion-insight-wrangler', './orion-insight-wrangler']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['orion-report-mailer', './orion-services/orion-reporting-agent']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['orion-macro-analyzer', './microservices/orion-macro-analyzer']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['orion-risk-sentinel', './microservices/orion-risk-sentinel']
+
+# --- Deployment Steps for Cloud Run Services ---
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      if [ -f "/workspace/orion-sec-fetcher.build_flag" ]; then
+        gcloud run deploy orion-sec-fetcher --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-sec-fetcher:$COMMIT_SHA --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID
+      fi
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      if [ -f "/workspace/orion-insight-wrangler.build_flag" ]; then
+        gcloud run deploy orion-insight-wrangler --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-insight-wrangler:$COMMIT_SHA --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID
+      fi
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      if [ -f "/workspace/orion-report-mailer.build_flag" ]; then
+        gcloud run deploy orion-report-mailer --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-report-mailer:$COMMIT_SHA --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --project=$PROJECT_ID
+      fi
+
+# --- Deployment Steps for Cloud Run Jobs ---
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      if [ -f "/workspace/alpha-loop-job.build_flag" ]; then
+        gcloud run jobs deploy alpha-loop-job --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/alpha-loop-job:$COMMIT_SHA --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID
+      fi
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      if [ -f "/workspace/orion-v8-job.build_flag" ]; then
+        gcloud run jobs deploy orion-v8-job --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-v8-job:$COMMIT_SHA --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID
+      fi
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      if [ -f "/workspace/orion-macro-analyzer.build_flag" ]; then
+        gcloud run jobs deploy orion-macro-analyzer --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-macro-analyzer:$COMMIT_SHA --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID
+      fi
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      if [ -f "/workspace/orion-daily-reporter.build_flag" ]; then
+        gcloud run jobs deploy orion-daily-reporter --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-daily-reporter:$COMMIT_SHA --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID
+      fi
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      if [ -f "/workspace/orion-monthly-reporter.build_flag" ]; then
+        gcloud run jobs deploy orion-monthly-reporter --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-monthly-reporter:$COMMIT_SHA --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID
+      fi
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      if [ -f "/workspace/orion-risk-sentinel.build_flag" ]; then
+        gcloud run jobs deploy orion-risk-sentinel --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-risk-sentinel:$COMMIT_SHA --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID
+      fi
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      if [ -f "/workspace/orion-weekly-reporter.build_flag" ]; then
+        gcloud run jobs deploy orion-weekly-reporter --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-weekly-reporter:$COMMIT_SHA --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID
+      fi
+
+# --- Deployment Steps for Cloud Functions (Source-based) ---
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      if [ -f "/workspace/zero-cost-filter.build_flag" ]; then
+        gcloud functions deploy zero-cost-filter --gen2 --runtime=python312 --source=./microservices/zero-cost-filter --entry-point=pre_filter_url --trigger-topic=raw-urls-ingest --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID
+      fi
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      if [ -f "/workspace/trigger-alpha-loop-func.build_flag" ]; then
+        gcloud functions deploy trigger-alpha-loop-func --gen2 --runtime=python312 --source=./microservices/alpha-loop-launcher --entry-point=main --trigger-http --allow-unauthenticated --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --project=$PROJECT_ID
+      fi
 
 options:
   logging: CLOUD_LOGGING_ONLY
