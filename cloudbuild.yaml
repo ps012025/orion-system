@@ -10,7 +10,7 @@ steps:
     - |
       set -e
       # Compare with origin/master to see what has changed.
-      CHANGED_DIRS=$(git diff --name-only origin/master HEAD | xargs -n 1 dirname | sort -u)
+      CHANGED_DIRS=$(git diff --name-only HEAD~1 HEAD | xargs -n 1 dirname | sort -u)
       if [ -z "$$CHANGED_DIRS" ]; then
         echo "No changes detected in service directories."
       else
