@@ -1,8 +1,8 @@
-Flask==3.0.0
-gunicorn==23.0.0
-google-cloud-firestore==2.16.0
-google-cloud-aiplatform==1.71.1
-pandas==2.2.2
-requests==2.32.3
-finnhub-python==2.4.*
-functions-framework==3.*
+Flask
+gunicorn
+google-cloud-firestore
+google-cloud-aiplatform
+pandas
+requests
+finnhub-python
+PyYAML
