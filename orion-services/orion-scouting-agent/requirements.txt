@@ -4,3 +4,5 @@ google-cloud-pubsub==2.22.0
 google-cloud-firestore==2.16.0
 requests==2.32.3
 aiohttp==3.9.5
+gunicorn
+Flask
