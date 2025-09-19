@@ -1,34 +1,9 @@
 # Service-specific pipeline for orion-calendar-importer
 steps:
-# 1. Dockerイメージをビルド
 - name: 'gcr.io/cloud-builders/docker'
-  id: 'Build'
-  args:
-    - 'build'
-    - '-t'
-    - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-calendar-importer:${_COMMIT_SHA}'
-    - '.'
-
-# 2. ビルドしたイメージをArtifact Registryにプッシュ
+  args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-calendar-importer:$_COMMIT_SHA', '.']
 - name: 'gcr.io/cloud-builders/docker'
-  id: 'Push'
-  args:
-    - 'push'
-    - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-calendar-importer:${_COMMIT_SHA}'
-
-# 3. Cloud Run "Job" としてデプロイ
+  args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-calendar-importer:$_COMMIT_SHA']
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  id: 'Deploy Job'
   entrypoint: 'gcloud'
-  args:
-    - 'run'
-    - 'jobs'
-    - 'deploy'
-    - 'orion-calendar-importer'
-    - '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-calendar-importer:${_COMMIT_SHA}'
-    - '--region=asia-northeast1'
-    - '--service-account=orion-calendar-importer-sa@$PROJECT_ID.iam.gserviceaccount.com'
-    - '--project=$PROJECT_ID'
-
-options:
-  logging: CLOUD_LOGGING_ONLY
+  args: ['run', 'deploy', 'orion-calendar-importer', '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-calendar-importer:$_COMMIT_SHA', '--region=asia-northeast1', '--service-account=orion-calendar-importer-sa@$PROJECT_ID.iam.gserviceaccount.com', '--no-allow-unauthenticated']
