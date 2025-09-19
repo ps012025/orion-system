@@ -16,7 +16,7 @@ steps:
     - 'push'
     - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-calendar-importer:${_COMMIT_SHA}'
 
-# 3. Cloud Run "Job" としてデプロイ
+# 3. Cloud Run "Job" としてデプロイ (gcloud run jobs deploy)
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   id: 'Deploy Job'
   entrypoint: 'gcloud'
