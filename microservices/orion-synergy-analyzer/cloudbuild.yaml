@@ -1,0 +1,15 @@
+# Service-specific pipeline for orion-synergy-analyzer
+steps:
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'gcloud'
+  args: 
+    - 'functions'
+    - 'deploy'
+    - 'orion-synergy-analyzer'
+    - '--gen2'
+    - '--runtime=python312'
+    - '--source=.'
+    - '--entry-point=synergy_analyzer_v4'
+    - '--trigger-topic=orion-new-insight-topic' # Assuming this is the trigger topic
+    - '--region=asia-northeast1'
+    - '--service-account=orion-synergy-analyzer-sa@$PROJECT_ID.iam.gserviceaccount.com'
