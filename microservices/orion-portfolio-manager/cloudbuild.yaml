@@ -1,0 +1,9 @@
+# Service-specific pipeline for orion-portfolio-manager
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-portfolio-manager:$_COMMIT_SHA', '.']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-portfolio-manager:$_COMMIT_SHA']
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'gcloud'
+  args: ['run', 'deploy', 'orion-portfolio-manager', '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-portfolio-manager:$_COMMIT_SHA', '--region=asia-northeast1', '--service-account=orion-portfolio-manager-sa@$PROJECT_ID.iam.gserviceaccount.com', '--no-allow-unauthenticated']
