@@ -1,9 +1,16 @@
 # Service-specific pipeline for orion-job-sentiment-analyzer
 steps:
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-job-sentiment-analyzer:$_COMMIT_SHA', '.']
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-job-sentiment-analyzer:$_COMMIT_SHA']
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: 'gcloud'
-  args: ['run', 'jobs', 'deploy', 'orion-job-sentiment-analyzer', '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-job-sentiment-analyzer:$_COMMIT_SHA', '--region=asia-northeast1', '--service-account=orion-job-sentiment-sa@$PROJECT_ID.iam.gserviceaccount.com']
+  args: 
+    - 'functions'
+    - 'deploy'
+    - 'orion-job-sentiment-analyzer'
+    - '--gen2'
+    - '--runtime=python312'
+    - '--source=.'
+    - '--entry-point=analyze_job_sentiment'
+    - '--trigger-event-filters=type=google.cloud.storage.object.v1.finalized'
+    - '--trigger-event-filters=bucket=orion-hr-jobs-storage' # Assuming this is the bucket name
+    - '--region=asia-northeast1'
+    - '--service-account=job-sentiment-analyzer-sa@$PROJECT_ID.iam.gserviceaccount.com'
