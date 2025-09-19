@@ -1,3 +1,4 @@
 requests
 google-cloud-secret-manager
-functions-framework
+Flask
+gunicorn
