@@ -1,9 +1,9 @@
 # Service-specific pipeline for orion-estat-fetcher
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-estat-fetcher:$_COMMIT_SHA', '.']
+  args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$_PROJECT_ID/orion-images/orion-estat-fetcher:$_COMMIT_SHA', '.']
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-estat-fetcher:$_COMMIT_SHA']
+  args: ['push', 'asia-northeast1-docker.pkg.dev/$_PROJECT_ID/orion-images/orion-estat-fetcher:$_COMMIT_SHA']
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: 'gcloud'
-  args: ['run', 'deploy', 'orion-estat-fetcher', '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-estat-fetcher:$_COMMIT_SHA', '--region=asia-northeast1', '--service-account=orion-estat-fetcher-sa@$PROJECT_ID.iam.gserviceaccount.com', '--no-allow-unauthenticated']
+  args: ['run', 'deploy', 'orion-estat-fetcher', '--image=asia-northeast1-docker.pkg.dev/$_PROJECT_ID/orion-images/orion-estat-fetcher:$_COMMIT_SHA', '--region=asia-northeast1', '--service-account=orion-estat-fetcher-sa@$_PROJECT_ID.iam.gserviceaccount.com', '--no-allow-unauthenticated']

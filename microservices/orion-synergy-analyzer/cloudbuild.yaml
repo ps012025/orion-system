@@ -12,4 +12,4 @@ steps:
     - '--entry-point=synergy_analyzer_v4'
     - '--trigger-topic=orion-new-insight-topic' # Assuming this is the trigger topic
     - '--region=asia-northeast1'
-    - '--service-account=orion-synergy-analyzer-sa@$PROJECT_ID.iam.gserviceaccount.com'
+    - '--service-account=orion-synergy-analyzer-sa@$_PROJECT_ID.iam.gserviceaccount.com'

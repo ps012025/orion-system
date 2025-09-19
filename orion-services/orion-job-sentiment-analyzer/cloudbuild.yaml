@@ -1,9 +1,9 @@
 # Service-specific pipeline for orion-job-sentiment-analyzer
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-job-sentiment-analyzer:$_COMMIT_SHA', '.']
+  args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$_PROJECT_ID/orion-images/orion-job-sentiment-analyzer:$_COMMIT_SHA', '.']
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-job-sentiment-analyzer:$_COMMIT_SHA']
+  args: ['push', 'asia-northeast1-docker.pkg.dev/$_PROJECT_ID/orion-images/orion-job-sentiment-analyzer:$_COMMIT_SHA']
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: 'gcloud'
-  args: ['run', 'jobs', 'deploy', 'orion-job-sentiment-analyzer', '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-job-sentiment-analyzer:$_COMMIT_SHA', '--region=asia-northeast1', '--service-account=orion-job-sentiment-sa@$PROJECT_ID.iam.gserviceaccount.com']
+  args: ['run', 'jobs', 'deploy', 'orion-job-sentiment-analyzer', '--image=asia-northeast1-docker.pkg.dev/$_PROJECT_ID/orion-images/orion-job-sentiment-analyzer:$_COMMIT_SHA', '--region=asia-northeast1', '--service-account=orion-job-sentiment-sa@$_PROJECT_ID.iam.gserviceaccount.com']

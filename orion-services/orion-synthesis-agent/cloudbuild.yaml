@@ -1,9 +1,9 @@
 # Service-specific pipeline for orion-synthesis-agent
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-synthesis-agent:$_COMMIT_SHA', '.']
+  args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$_PROJECT_ID/orion-images/orion-synthesis-agent:$_COMMIT_SHA', '.']
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-synthesis-agent:$_COMMIT_SHA']
+  args: ['push', 'asia-northeast1-docker.pkg.dev/$_PROJECT_ID/orion-images/orion-synthesis-agent:$_COMMIT_SHA']
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: 'gcloud'
-  args: ['run', 'deploy', 'orion-synthesis-agent', '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-synthesis-agent:$_COMMIT_SHA', '--region=asia-northeast1', '--service-account=orion-synthesis-agent-sa@$PROJECT_ID.iam.gserviceaccount.com', '--no-allow-unauthenticated']
+  args: ['run', 'deploy', 'orion-synthesis-agent', '--image=asia-northeast1-docker.pkg.dev/$_PROJECT_ID/orion-images/orion-synthesis-agent:$_COMMIT_SHA', '--region=asia-northeast1', '--service-account=orion-synthesis-agent-sa@$_PROJECT_ID.iam.gserviceaccount.com', '--no-allow-unauthenticated']

@@ -1,9 +1,9 @@
 # Service-specific pipeline for orion-daily-heartbeat
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-daily-heartbeat:$_COMMIT_SHA', '.']
+  args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$_PROJECT_ID/orion-images/orion-daily-heartbeat:$_COMMIT_SHA', '.']
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-daily-heartbeat:$_COMMIT_SHA']
+  args: ['push', 'asia-northeast1-docker.pkg.dev/$_PROJECT_ID/orion-images/orion-daily-heartbeat:$_COMMIT_SHA']
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: 'gcloud'
-  args: ['run', 'deploy', 'orion-daily-heartbeat', '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-daily-heartbeat:$_COMMIT_SHA', '--region=asia-northeast1', '--service-account=orion-daily-heartbeat-sa@$PROJECT_ID.iam.gserviceaccount.com', '--no-allow-unauthenticated']
+  args: ['run', 'deploy', 'orion-daily-heartbeat', '--image=asia-northeast1-docker.pkg.dev/$_PROJECT_ID/orion-images/orion-daily-heartbeat:$_COMMIT_SHA', '--region=asia-northeast1', '--service-account=orion-daily-heartbeat-sa@$_PROJECT_ID.iam.gserviceaccount.com', '--no-allow-unauthenticated']

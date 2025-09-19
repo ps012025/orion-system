@@ -13,6 +13,6 @@ steps:
     - '--trigger-http'
     - '--no-allow-unauthenticated'
     - '--region=asia-northeast1'
-    - '--service-account=trigger-alpha-loop-func-sa@$PROJECT_ID.iam.gserviceaccount.com'
+    - '--service-account=trigger-alpha-loop-func-sa@$_PROJECT_ID.iam.gserviceaccount.com'
     - '--memory=1Gi'
-    - '--project=$PROJECT_ID'
+    - '--project=$_PROJECT_ID'
