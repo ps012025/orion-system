@@ -1,5 +1,5 @@
 steps:
-# Step 1: Detect changed services
+# Step 1: Detect changed services based on git history
 - name: 'gcr.io/cloud-builders/git'
   id: 'detect-changes'
   entrypoint: 'bash'
@@ -31,14 +31,14 @@ steps:
         # Default to Cloud Run deployment
         DEPLOY_COMMAND="gcloud run deploy ${SERVICE_NAME} --source=./microservices/${SERVICE_NAME}/ --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --no-allow-unauthenticated --set-env-vars=GCP_PROJECT=$PROJECT_ID"
 
-        # Check for specific service types that need different deployment commands
+        # Check for specific service types that need different deployment commands (e.g., Cloud Functions)
         if [[ "${SERVICE_NAME}" == "orion-job-sentiment-analyzer" || "${SERVICE_NAME}" == "orion-synergy-analyzer" || "${SERVICE_NAME}" == "alpha-loop-launcher" ]]; then
           DEPLOY_COMMAND="gcloud functions deploy ${SERVICE_NAME} --gen2 --runtime=python312 --source=./microservices/${SERVICE_NAME}/ --entry-point=<YOUR_ENTRY_POINT> --trigger-topic=<YOUR_TRIGGER_TOPIC> --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --set-env-vars=GCP_PROJECT=$PROJECT_ID"
         fi
 
-        # Run the deployment in the background
+        # Run the deployment in the background to allow for parallel execution
         ${DEPLOY_COMMAND} &
       fi
     done
-    # Wait for all background jobs to finish
+    # Wait for all background deployment jobs to finish
     wait
