@@ -1,6 +1,9 @@
 # Service-specific pipeline for orion-news-fetcher
 steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-news-fetcher:$_COMMIT_SHA', '.']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-news-fetcher:$_COMMIT_SHA']
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  id: 'Deploy'
   entrypoint: 'gcloud'
-  args: ['functions', 'deploy', 'orion-news-fetcher', '--gen2', '--runtime=python312', '--source=.', '--entry-point=main', '--trigger-http', '--no-allow-unauthenticated', '--region=asia-northeast1', '--service-account=orion-news-fetcher-sa@$PROJECT_ID.iam.gserviceaccount.com']
+  args: ['run', 'deploy', 'orion-news-fetcher', '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/orion-images/orion-news-fetcher:$_COMMIT_SHA', '--region=asia-northeast1', '--service-account=orion-news-fetcher-sa@$PROJECT_ID.iam.gserviceaccount.com', '--no-allow-unauthenticated']
