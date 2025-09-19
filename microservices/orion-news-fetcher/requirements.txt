@@ -2,4 +2,4 @@ google-cloud-firestore
 google-cloud-pubsub
 requests
 finnhub-python
-functions-framework
+functions-frameworkPyYAML
