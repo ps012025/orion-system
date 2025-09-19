@@ -1,0 +1,18 @@
+# Service-specific pipeline for orion-fred-fetcher
+steps:
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  id: 'Deploy'
+  entrypoint: 'gcloud'
+  args:
+    - 'functions'
+    - 'deploy'
+    - 'orion-fred-fetcher'
+    - '--gen2'
+    - '--runtime=python312'
+    - '--source=.'
+    - '--entry-point=main' # Assuming the function to run is named 'main'
+    - '--trigger-http'
+    - '--no-allow-unauthenticated'
+    - '--region=asia-northeast1'
+    - '--service-account=orion-fred-fetcher-sa@$PROJECT_ID.iam.gserviceaccount.com'
+    - '--project=$PROJECT_ID'

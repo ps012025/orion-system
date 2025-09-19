@@ -2,4 +2,4 @@ google-cloud-firestore
 google-cloud-pubsub
 requests
 feedparser
-functions-framework
+functions-frameworkPyYAML

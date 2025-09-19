@@ -1,0 +1,6 @@
+# Service-specific pipeline for orion-hr-fetcher
+steps:
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  id: 'Deploy'
+  entrypoint: 'gcloud'
+  args: ['functions', 'deploy', 'orion-hr-fetcher', '--gen2', '--runtime=python312', '--source=.', '--entry-point=main', '--trigger-http', '--no-allow-unauthenticated', '--region=asia-northeast1', '--service-account=orion-hr-fetcher-sa@$PROJECT_ID.iam.gserviceaccount.com']
