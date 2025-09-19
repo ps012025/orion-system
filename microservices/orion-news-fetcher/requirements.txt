@@ -3,4 +3,5 @@ google-cloud-pubsub
 requests
 finnhub-python
 functions-framework
-PyYAMLgunicorn
+PyYAML
+gunicorn
