@@ -1,15 +1,15 @@
-# Use an official Python runtime as a parent image
-FROM python:3.10-slim
+# 1. ベースイメージとしてPython 3.12-slimを選択
+FROM python:3.12-slim
 
-# Set environment variables
-ENV APP_HOME /app
-WORKDIR $APP_HOME
+# 2. アプリケーションの作業ディレクトリを設定
+WORKDIR /app
 
-# Copy the application files
-COPY . .
-
-# Install dependencies
+# 3. 依存関係のファイルをコピーしてインストール
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Run the web server on container startup
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 main:app
+# 4. アプリケーションのソースコードを全てコピー
+COPY . .
+
+# 5. ジョブ実行時に main.py を実行する (JobなのでWebサーバーは不要)
+CMD ["python", "main.py"]
