@@ -1,28 +1,44 @@
-# Orion System - Final CI/CD Dispatcher Pipeline
 steps:
+# Step 1: Detect changed services
 - name: 'gcr.io/cloud-builders/git'
-  id: 'Fetch git history'
-  entrypoint: 'bash'
-  args: [ '-c', 'git fetch --unshallow' ]
-
-- name: 'gcr.io/cloud-builders/gcloud'
-  id: 'Identify and deploy changed services'
+  id: 'detect-changes'
   entrypoint: 'bash'
   args:
   - '-c'
   - |
-    CHANGED_DIRS=$(git diff --name-only HEAD~1 HEAD | xargs -n 1 dirname | sort -u)
-    for dir in $${CHANGED_DIRS}; do
-      if [ "$$dir" == "." ]; then continue; fi
-      if [ -f "$${dir}/cloudbuild.yaml" ]; then
-        echo "--> Triggering build for '$${dir}'"
-        gcloud builds submit "$${dir}" \
-          --config="$${dir}/cloudbuild.yaml" \
-          --substitutions=_COMMIT_SHA=$COMMIT_SHA,_PROJECT_ID=$PROJECT_ID \
-          --project=$PROJECT_ID
+    git fetch origin master
+    CHANGED_FILES=$(git diff --name-only origin/master HEAD)
+    echo "Changed files: $CHANGED_FILES"
+    for SERVICE_DIR in microservices/*/; do
+      SERVICE_NAME=$(basename $SERVICE_DIR)
+      if echo "$CHANGED_FILES" | grep -q "^microservices/$SERVICE_NAME/"; then
+        echo "Changes detected in $SERVICE_NAME, marking for build."
+        touch "/workspace/$SERVICE_NAME.build_flag"
       fi
     done
 
-options:
-  logging: CLOUD_LOGGING_ONLY
-  diskSizeGb: 200
+# Step 2: Deploy all changed services in parallel
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  id: 'deploy-services'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    for SERVICE_DIR in microservices/*/; do
+      SERVICE_NAME=$(basename $SERVICE_DIR)
+      if [ -f "/workspace/$SERVICE_NAME.build_flag" ]; then
+        echo "Deploying $SERVICE_NAME..."
+        # Default to Cloud Run deployment
+        DEPLOY_COMMAND="gcloud run deploy ${SERVICE_NAME} --source=./microservices/${SERVICE_NAME}/ --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --no-allow-unauthenticated --set-env-vars=GCP_PROJECT=$PROJECT_ID"
+
+        # Check for specific service types that need different deployment commands
+        if [[ "${SERVICE_NAME}" == "orion-job-sentiment-analyzer" || "${SERVICE_NAME}" == "orion-synergy-analyzer" || "${SERVICE_NAME}" == "alpha-loop-launcher" ]]; then
+          DEPLOY_COMMAND="gcloud functions deploy ${SERVICE_NAME} --gen2 --runtime=python312 --source=./microservices/${SERVICE_NAME}/ --entry-point=<YOUR_ENTRY_POINT> --trigger-topic=<YOUR_TRIGGER_TOPIC> --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --set-env-vars=GCP_PROJECT=$PROJECT_ID"
+        fi
+
+        # Run the deployment in the background
+        ${DEPLOY_COMMAND} &
+      fi
+    done
+    # Wait for all background jobs to finish
+    wait
