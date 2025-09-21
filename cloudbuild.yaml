@@ -1,5 +1,5 @@
 steps:
-# Step 1: Detect changed services
+# Step 1: Detect changed services and write to a file
 - name: 'gcr.io/cloud-builders/git'
   id: 'detect-changes'
   entrypoint: 'bash'
@@ -7,39 +7,31 @@ steps:
   - '-c'
   - |
     git fetch origin master
-    CHANGED_DIRS=$(git diff --name-only origin/master HEAD | xargs -n 1 dirname | sort -u)
-    if [ -z "$CHANGED_DIRS" ]; then
-      echo "No changes detected in service directories."
-    else
-      echo "Detected changes in the following services:"
-      for DIR in $CHANGED_DIRS; do
-        SERVICE_NAME=$(basename "$DIR")
-        echo "- $SERVICE_NAME"
-        touch "/workspace/$SERVICE_NAME.build_flag"
-      done
-    fi
+    # Compare with the previous commit on the master branch
+    git diff --name-only origin/master~1 origin/master > /workspace/changed_files.txt
+    echo "Changed files:"
+    cat /workspace/changed_files.txt
 
-# --- Dynamic Deployment Steps for each service ---
+# Step 2: Deploy all changed services based on the file
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  id: 'deploy-all-services'
+  id: 'deploy-services'
   entrypoint: 'bash'
   args:
   - '-c'
   - |
-    # Define all services and their deployment commands
-    declare -A SERVICES
-    SERVICES["orion-sec-fetcher"]="gcloud run deploy orion-sec-fetcher \
-      --source=./microservices/orion-sec-fetcher --region=asia-northeast1 \
-      --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com \
-      --no-allow-unauthenticated --set-env-vars=GCP_PROJECT=$PROJECT_ID"
-    # ... Add all other 16 services here in the same format ...
-    for SERVICE_NAME in "${!SERVICES[@]}"; do
-      if [ -f "/workspace/$SERVICE_NAME.build_flag" ]; then
-        echo "--- Deploying $SERVICE_NAME ---"
-        COMMAND=${SERVICES[$SERVICE_NAME]}
-        $COMMAND &
-      fi
+    if [ ! -s /workspace/changed_files.txt ]; then
+      echo "No changes detected. Skipping deployment."
+      exit 0
+    fi
+
+    # Get unique service names from the changed files list
+    cut -d/ -f2 /workspace/changed_files.txt | sort -u | while read -r SERVICE_NAME; do
+      echo "--- Change detected in ${SERVICE_NAME}, preparing deployment ---"
+
+      # This is a placeholder for the actual deployment command
+      echo "gcloud run deploy ${SERVICE_NAME} --source=./microservices/${SERVICE_NAME} ..."
+
     done
-    wait
 options:
   logging: CLOUD_LOGGING_ONLY
+
