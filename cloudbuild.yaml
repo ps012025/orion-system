@@ -1,37 +1,9 @@
 steps:
-# Step 1: Detect changed services and write to a file
-- name: 'gcr.io/cloud-builders/git'
-  id: 'detect-changes'
-  entrypoint: 'bash'
-  args:
-  - '-c'
-  - |
-    git fetch origin master
-    # Compare with the previous commit on the master branch
-    git diff --name-only origin/master~1 origin/master > /workspace/changed_files.txt
-    echo "Changed files:"
-    cat /workspace/changed_files.txt
-
-# Step 2: Deploy all changed services based on the file
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  id: 'deploy-services'
   entrypoint: 'bash'
   args:
   - '-c'
   - |
-    if [ ! -s /workspace/changed_files.txt ]; then
-      echo "No changes detected. Skipping deployment."
-      exit 0
-    fi
-
-    # Get unique service names from the changed files list
-    cut -d/ -f2 /workspace/changed_files.txt | sort -u | while read -r SERVICE_NAME; do
-      echo "--- Change detected in ${SERVICE_NAME}, preparing deployment ---"
-
-      # This is a placeholder for the actual deployment command
-      echo "gcloud run deploy ${SERVICE_NAME} --source=./microservices/${SERVICE_NAME} ..."
-
-    done
-options:
-  logging: CLOUD_LOGGING_ONLY
-
+    echo "--- Deploying ALL services ---"
+    gcloud run deploy orion-sec-fetcher --source=./microservices/orion-sec-fetcher --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --no-allow-unauthenticated --set-env-vars=GCP_PROJECT=$PROJECT_ID
+    # Add all other service deployment commands here, one by one
