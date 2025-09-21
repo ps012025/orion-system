@@ -5,3 +5,4 @@ feedparser
 functions-framework
 PyYAML
 PyYAML
+PyYAML
