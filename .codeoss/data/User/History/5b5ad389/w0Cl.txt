@@ -1,7 +1,0 @@
-yfinance
-flask
-pandas
-requests
-vertexai
-google-cloud-storage
-gunicorn

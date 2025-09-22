@@ -1,0 +1,5 @@
+pandas
+finnhub-python
+google-cloud-bigquery
+google-cloud-firestore
+functions-framework

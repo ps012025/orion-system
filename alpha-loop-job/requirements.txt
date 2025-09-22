@@ -1,0 +1,9 @@
+# requirements.txt
+pandas
+google-cloud-bigquery
+google-cloud-firestore
+google-cloud-aiplatform
+backtesting
+# Bokehはbacktestingに必要
+Bokeh
+functions-framework

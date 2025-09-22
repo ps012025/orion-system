@@ -1,0 +1,7 @@
+Flask
+google-cloud-firestore
+google-cloud-pubsub
+requests
+PyYAML
+feedparser
+functions-framework
