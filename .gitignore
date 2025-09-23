@@ -104,7 +104,6 @@ trigger_reporting_agent.py
 alpha_generation_loop/
 alpha-loop-job/
 infrastructure/
-microservices/
 notebooks/
 orion-datalake-tools/
 orion-risk-sentinel/
@@ -189,7 +188,6 @@ trigger_reporting_agent.py
 alpha_generation_loop/
 alpha-loop-job/
 infrastructure/
-microservices/
 notebooks/
 orion-datalake-tools/
 orion-risk-sentinel/
