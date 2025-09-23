@@ -5,4 +5,4 @@ finnhub-python
 PyYAML
 Flask
 gunicorn
-pandaspandas
+pandas
