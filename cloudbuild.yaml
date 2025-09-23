@@ -1,9 +1,97 @@
+
 steps:
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+# Get the list of changed files from the commit
+- name: 'gcr.io/cloud-builders/git'
+  id: 'get_changed_files'
   entrypoint: 'bash'
   args:
   - '-c'
-  - |
-    echo "--- Deploying ALL services ---"
-    gcloud run deploy orion-sec-fetcher --source=./microservices/orion-sec-fetcher --region=asia-northeast1 --service-account=orion-service-account@$PROJECT_ID.iam.gserviceaccount.com --no-allow-unauthenticated --set-env-vars=GCP_PROJECT=$PROJECT_ID
-    # Add all other service deployment commands here, one by one
+  - | 
+    git fetch origin $BRANCH_NAME
+    git diff --name-only origin/$BRANCH_NAME > changed_files.txt
+    echo "Changed files:"
+    cat changed_files.txt
+
+# Determine which microservices to deploy based on changed files
+- name: 'ubuntu'
+  id: 'determine_services'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - | 
+    #!/bin/bash
+    # Read changed files into an array
+    mapfile -t changed_files < changed_files.txt
+
+    # Associative array to hold services to deploy
+    declare -A services_to_deploy
+
+    for file in "${changed_files[@]}"; do
+      if [[ "$file" == microservices/* ]]; then
+        # Extract the service name (the directory under microservices/)
+        service_name=$(echo "$file" | cut -d '/' -f 2)
+        if [ -n "$service_name" ]; then
+          echo "Change detected in service: $service_name"
+          services_to_deploy["$service_name"] = 1
+        fi
+      fi
+    done
+
+    # Write the list of services to a file for the next step
+    if [ ${#services_to_deploy[@]} -eq 0 ]; then
+      echo "No changes detected in any microservice. Nothing to deploy."
+      touch no_services_to_deploy.txt
+    else
+      echo "Services to deploy: ${!services_to_deploy[@]}"
+      printf "%s\n" "${!services_to_deploy[@]}" > services_to_deploy.txt
+    fi
+
+# Deploy each changed microservice
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: 'deploy_services'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - | 
+    #!/bin/bash
+    # If the file indicating no services exists, exit gracefully
+    if [ -f "no_services_to_deploy.txt" ]; then
+      echo "Skipping deployment step."
+      exit 0
+    fi
+
+    # Read the list of services to deploy
+    mapfile -t services < services_to_deploy.txt
+
+    # Define service types and their corresponding gcloud commands
+    declare -A service_types
+    service_types["orion-sec-importer"]="run deploy"
+    service_types["orion-synthesis-agent"]="run deploy"
+    service_types["orion-finnhub-downloader"]="run deploy"
+    service_types["orion-backtester"]="run jobs deploy"
+    # Add other services as needed, e.g., Cloud Functions
+    # service_types["zero-cost-filter"]="functions deploy"
+
+    for service in "${services[@]}"; do
+      echo "-----------------------------------------------------"
+      echo "Deploying service: $service"
+      echo "-----------------------------------------------------"
+      
+      deploy_command="${service_types[$service]}"
+      if [ -z "$deploy_command" ]; then
+        echo "WARNING: Unknown service type for $service. Skipping deployment."
+        continue
+      fi
+
+      # Construct the gcloud command dynamically
+      gcloud_cmd="gcloud $deploy_command \"$service\" \
+        --source=\"./microservices/$service\" \
+        --region=\"asia-northeast1\" \
+        --project=\"$_PROJECT_ID\" \
+        --allow-unauthenticated"
+
+      echo "Running: $gcloud_cmd"
+      eval $gcloud_cmd # Use eval to execute the dynamically constructed command
+    done
+options:
+  logging: CLOUD_LOGGING_ONLY
