@@ -5,9 +5,9 @@ steps:
   entrypoint: 'bash'
   args:
   - '-c'
-  - | 
+  - |
     git fetch origin $BRANCH_NAME
-    git diff --name-only origin/$BRANCH_NAME > changed_files.txt
+    git diff --name-only origin/$BRANCH_NAME..HEAD > changed_files.txt
     echo "Changed files:"
     cat changed_files.txt
 
@@ -17,7 +17,7 @@ steps:
   entrypoint: 'bash'
   args:
   - '-c'
-  - | 
+  - |
     #!/bin/bash
     # Read changed files into an array
     mapfile -t changed_files < changed_files.txt
@@ -51,7 +51,7 @@ steps:
   entrypoint: 'bash'
   args:
   - '-c'
-  - | 
+  - |
     #!/bin/bash
     # If the file indicating no services exists, exit gracefully
     if [ -f "no_services_to_deploy.txt" ]; then
