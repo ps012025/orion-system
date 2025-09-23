@@ -87,12 +87,9 @@ steps:
         --source=\"./microservices/$service\" \
         --region=\"asia-northeast1\" \
         --project=\"$_PROJECT_ID\" \
-        --allow-unauthenticated"
+        --allow-unauthenticated \
+        --logging=CLOUD_LOGGING_ONLY"
 
       echo "Running: $gcloud_cmd"
       eval $gcloud_cmd # Use eval to execute the dynamically constructed command
     done
-env:
-- 'PROJECT_ID=${_PROJECT_ID}'
-options:
-  logging: CLOUD_LOGGING_ONLY
