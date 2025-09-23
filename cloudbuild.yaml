@@ -7,9 +7,9 @@ steps:
   - '-c'
   - |
     git fetch origin $BRANCH_NAME
-    git diff --name-only origin/$BRANCH_NAME..HEAD > changed_files.txt
+    git diff --name-only HEAD~1 HEAD | xargs -n 1 dirname | sort -u > changed_files.txt
     echo "Changed files:"
-    cat changed_files.txt
+    cat changed_changed_files.txt
 
 # Determine which microservices to deploy based on changed files
 - name: 'ubuntu'
