@@ -2,22 +2,22 @@ import os
 import finnhub
 import pandas as pd
 from google.cloud import bigquery
-from flask import Flask, request
 from datetime import datetime, timedelta
 
-app = Flask(__name__)
+# --- Configuration ---
+PROJECT_ID = os.environ.get("GCP_PROJECT", "project-orion-admins")
+DATASET_ID = "orion_datalake"
+TABLE_ID = "finnhub_news"
 
-@app.route("/", methods=["POST"])
-def news_fetcher_http():
+# --- Main Logic for Cloud Run Job ---
+def main():
+    print("Orion News Fetcher v3 (Cloud Run Job) activated...")
     try:
-        project_id = os.environ.get("GCP_PROJECT", "project-orion-admins")
-        dataset_id = "orion_datalake"
-        table_id = "finnhub_news"
         finnhub_api_key = os.environ.get("FINNHUB_API_KEY")
 
         if not finnhub_api_key:
             print("ERROR: FINNHUB_API_KEY environment variable is not set.")
-            return "Internal Server Error: FINNHUB_API_KEY not set", 500
+            raise ValueError("FINNHUB_API_KEY not set")
 
         print("Fetching news from Finnhub API...")
         finnhub_client = finnhub.Client(api_key=finnhub_api_key)
@@ -29,7 +29,7 @@ def news_fetcher_http():
         
         if not news_list:
             print("No news found for the period.")
-            return "No news found.", 204
+            return
 
         print(f"Successfully fetched {len(news_list)} news articles.")
         df = pd.DataFrame(news_list)
@@ -41,8 +41,8 @@ def news_fetcher_http():
 
         if not df.empty:
             print(f"Writing {len(df)} unique rows to BigQuery table...")
-            client = bigquery.Client(project=project_id)
-            table_ref = client.dataset(dataset_id).table(table_id)
+            client = bigquery.Client(project=PROJECT_ID)
+            table_ref = client.dataset(DATASET_ID).table(TABLE_ID)
 
             job_config = bigquery.LoadJobConfig(write_disposition="WRITE_APPEND")
             
@@ -52,12 +52,11 @@ def news_fetcher_http():
         else:
             print("No new unique news to write.")
 
-        return "Success", 200
+        print("Orion News Fetcher job finished successfully.")
 
     except Exception as e:
-        print(f"FATAL ERROR in news_fetcher_http: {e}")
-        # Return a more detailed error message to help debugging
-        return f"Error: {str(e)}", 500
+        print(f"FATAL ERROR in news_fetcher job: {e}")
+        raise # Re-raise the exception so the job fails
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    main()
