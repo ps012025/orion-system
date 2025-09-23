@@ -1,95 +1,98 @@
+
 steps:
-# Get the list of changed files from the commit
+# Step 1: Detect changed files and determine which microservices need deployment
 - name: 'gcr.io/cloud-builders/git'
-  id: 'get_changed_files'
+  id: 'detect-changes'
   entrypoint: 'bash'
   args:
   - '-c'
   - |
+    set -e
+    # Fetch the remote branch to compare against
     git fetch origin $BRANCH_NAME
-    git diff --name-only HEAD~1 HEAD | xargs -n 1 dirname | sort -u > changed_files.txt
-    echo "Changed files:"
-    cat changed_changed_files.txt
+    # Get a unique list of changed directories under 'microservices/'
+    # Compare HEAD (current commit) with origin/$BRANCH_NAME (previous state of the branch)
+    git diff --name-only origin/$BRANCH_NAME HEAD | grep '^microservices/' | cut -d '/' -f 2 | sort -u > changed_services.txt
 
-# Determine which microservices to deploy based on changed files
-- name: 'ubuntu'
-  id: 'determine_services'
-  entrypoint: 'bash'
-  args:
-  - '-c'
-  - |
-    #!/bin/bash
-    # Read changed files into an array
-    mapfile -t changed_files < changed_files.txt
-
-    # Associative array to hold services to deploy
-    declare -A services_to_deploy
-
-    for file in "${changed_files[@]}"; do
-      if [[ "$file" == microservices/* ]]; then
-        # Extract the service name (the directory under microservices/)
-        service_name=$(echo "$file" | cut -d '/' -f 2)
-        if [ -n "$service_name" ]; then
-          echo "Change detected in service: $service_name"
-          services_to_deploy["$service_name"] = 1
-        fi
-      fi
-    done
-
-    # Write the list of services to a file for the next step
-    if [ ${#services_to_deploy[@]} -eq 0 ]; then
-      echo "No changes detected in any microservice. Nothing to deploy."
-      touch no_services_to_deploy.txt
+    if [ ! -s changed_services.txt ]; then
+      echo "No changes detected in microservices. Skipping deployment."
+      # Create a dummy file to indicate no services need deployment
+      touch /workspace/no_services_to_deploy.flag
     else
-      echo "Services to deploy: ${!services_to_deploy[@]}"
-      printf "%s\n" "${!services_to_deploy[@]}" > services_to_deploy.txt
+      echo "Changes detected in the following microservices:"
+      cat changed_services.txt
     fi
 
-# Deploy each changed microservice
-- name: 'gcr.io/cloud-builders/gcloud'
-  id: 'deploy_services'
+# Step 2: Deploy only the changed microservices
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  id: 'deploy-changed-services'
   entrypoint: 'bash'
   args:
   - '-c'
   - |
     #!/bin/bash
-    # If the file indicating no services exists, exit gracefully
-    if [ -f "no_services_to_deploy.txt" ]; then
-      echo "Skipping deployment step."
+    # If no services need deployment, exit gracefully
+    if [ -f "/workspace/no_services_to_deploy.flag" ]; then
+      echo "No microservices to deploy. Exiting step."
       exit 0
     fi
 
-    # Read the list of services to deploy
-    mapfile -t services < services_to_deploy.txt
+    # Read the list of changed services
+    mapfile -t services_to_deploy < changed_services.txt
 
-    # Define service types and their corresponding gcloud commands
-    declare -A service_types
-    service_types["orion-sec-importer"]="run deploy"
-    service_types["orion-synthesis-agent"]="run deploy"
-    service_types["orion-finnhub-downloader"]="run deploy"
-    service_types["orion-backtester"]="run jobs deploy"
-    # Add other services as needed, e.g., Cloud Functions
-    # service_types["zero-cost-filter"]="functions deploy"
+    # Define common deployment arguments
+    COMMON_RUN_ARGS="--region=asia-northeast1 --project=$_PROJECT_ID"
 
-    for service in "${services[@]}"; do
+    # Loop through each changed service and deploy it
+    for service_name in "${services_to_deploy[@]}"; do
       echo "-----------------------------------------------------"
-      echo "Deploying service: $service"
+      echo "Attempting to deploy: $service_name"
       echo "-----------------------------------------------------"
-      
-      deploy_command="${service_types[$service]}"
-      if [ -z "$deploy_command" ]; then
-        echo "WARNING: Unknown service type for $service. Skipping deployment."
-        continue
+
+      # Determine deployment command and service account based on service_name
+      DEPLOY_CMD="gcloud run deploy"
+      SERVICE_ACCOUNT="328258682114-compute@developer.gserviceaccount.com" # Default compute SA
+      ALLOW_UNAUTHENTICATED="--allow-unauthenticated"
+      IS_JOB=false
+      IS_FUNCTION=false
+
+      case "$service_name" in
+        "orion-backtester")
+          DEPLOY_CMD="gcloud run jobs deploy"
+          IS_JOB=true
+          ;;
+        "alpha-loop-launcher"|"orion-calendar-importer"|"orion-daily-heartbeat"|
+        "orion-estat-fetcher"|"orion-fred-fetcher"|"orion-gov-fetcher"|
+        "orion-hr-fetcher"|"orion-job-sentiment-analyzer"|"zero-cost-filter"|
+        "trigger-alpha-loop-func")
+          DEPLOY_CMD="gcloud functions deploy"
+          IS_FUNCTION=true
+          # Functions often need specific runtimes and entrypoints
+          # This is a simplified example, actual function deployment needs more args
+          ;;
+        "orion-news-fetcher")
+          SERVICE_ACCOUNT="orion-news-fetcher-sa@project-orion-admins.iam.gserviceaccount.com"
+          ;;
+        # Add more specific service account mappings here if needed
+      esac
+
+      # Construct the full deployment command
+      FULL_DEPLOY_CMD=""
+      if [ "$IS_JOB" = true ]; then
+        FULL_DEPLOY_CMD="$DEPLOY_CMD $service_name --source=./microservices/$service_name $COMMON_RUN_ARGS --service-account=$SERVICE_ACCOUNT"
+      elif [ "$IS_FUNCTION" = true ]; then
+        # This is a placeholder. Actual function deployment requires more specific args.
+        # You'll need to fill in runtime, entry-point, trigger-topic/http, etc.
+        echo "WARNING: Function deployment for $service_name is a placeholder. Please update cloudbuild.yaml."
+        FULL_DEPLOY_CMD="$DEPLOY_CMD $service_name --gen2 --runtime=python310 --source=./microservices/$service_name --entry-point=main $COMMON_RUN_ARGS --service-account=$SERVICE_ACCOUNT"
+      else # Regular Cloud Run Service
+        FULL_DEPLOY_CMD="$DEPLOY_CMD $service_name --source=./microservices/$service_name $COMMON_RUN_ARGS $ALLOW_UNAUTHENTICATED --service-account=$SERVICE_ACCOUNT"
       fi
 
-      # Construct the gcloud command dynamically
-      gcloud_cmd="gcloud $deploy_command \"$service\" \
-        --source=\"./microservices/$service\" \
-        --region=\"asia-northeast1\" \
-        --project=\"$_PROJECT_ID\" \
-        --allow-unauthenticated \
-        --logging=CLOUD_LOGGING_ONLY"
+      echo "Running command: $FULL_DEPLOY_CMD"
+      # Execute the deployment command
+      # Using 'bash -c' to ensure proper command parsing and execution
+      bash -c "$FULL_DEPLOY_CMD"
 
-      echo "Running: $gcloud_cmd"
-      eval $gcloud_cmd # Use eval to execute the dynamically constructed command
+      echo "Deployment of $service_name completed."
     done
